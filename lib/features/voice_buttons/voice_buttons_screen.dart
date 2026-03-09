@@ -112,9 +112,11 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     }
 
     final canRepairRecorded =
-        status != RitualRepo.integrityOk && it.state == RitualRepo.stateRecorded;
+        status != RitualRepo.integrityOk &&
+        it.state == RitualRepo.stateRecorded;
     final canRepairArchived =
-        status != RitualRepo.integrityOk && it.state == RitualRepo.stateArchived;
+        status != RitualRepo.integrityOk &&
+        it.state == RitualRepo.stateArchived;
 
     final action = await showDialog<String>(
       context: context,
@@ -128,22 +130,22 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, 'check'),
-            child: const Text('Run check'),
+            child: const Text('Run check again'),
           ),
           if (canRepairRecorded)
             TextButton(
               onPressed: () => Navigator.pop(context, 'repairRecorded'),
-              child: const Text('Repair to empty'),
+              child: const Text('Repair active to empty'),
             ),
           if (canRepairArchived)
             TextButton(
               onPressed: () => Navigator.pop(context, 'repairArchived'),
-              child: const Text('Repair to empty'),
+              child: const Text('Repair archive to empty'),
             ),
           if (status != RitualRepo.integrityOk)
             TextButton(
               onPressed: () => Navigator.pop(context, 'delete'),
-              child: const Text('Delete slot'),
+              child: const Text('Delete slot permanently'),
             ),
         ],
       ),
@@ -179,6 +181,23 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     }
   }
 
+  Future<void> _runIntegrityMenuAction(String action) async {
+    if (action == 'check') {
+      await controller.runIntegrityCheck();
+      return;
+    }
+
+    if (action == 'repairRecorded') {
+      await controller.runIntegrityCheckRepairRecorded();
+      return;
+    }
+
+    if (action == 'repairAll') {
+      await controller.runIntegrityCheckRepairAll();
+      return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -187,10 +206,24 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
         backgroundColor: Colors.black,
         title: const Text('Voice Repeat'),
         actions: [
-          IconButton(
-            tooltip: 'Integrity check',
-            onPressed: () => controller.runIntegrityCheck(),
+          PopupMenuButton<String>(
+            tooltip: 'Integrity actions',
             icon: const Icon(Icons.shield_outlined),
+            onSelected: _runIntegrityMenuAction,
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'check',
+                child: Text('Check only'),
+              ),
+              PopupMenuItem(
+                value: 'repairRecorded',
+                child: Text('Check and repair active'),
+              ),
+              PopupMenuItem(
+                value: 'repairAll',
+                child: Text('Check and repair all'),
+              ),
+            ],
           ),
         ],
         bottom: TabBar(

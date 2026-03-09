@@ -231,7 +231,7 @@ class VoiceButtonsController extends ChangeNotifier {
       personId: personId,
       itemId: itemId,
     );
-    _emitUi('Broken recorded item repaired to empty.');
+    _emitUi('Broken active item repaired to empty.');
   }
 
   Future<void> repairArchivedIssueToEmpty(String itemId) async {
@@ -247,6 +247,29 @@ class VoiceButtonsController extends ChangeNotifier {
     final summary = await integrity.checkPerson(personId: personId);
     _emitUi(
       'Integrity check done. Checked ${summary.checked}. Issues ${summary.issues}. Fixed ${summary.fixed}.',
+    );
+    return summary;
+  }
+
+  Future<IntegritySummary> runIntegrityCheckRepairRecorded() async {
+    final summary = await integrity.checkPerson(
+      personId: personId,
+      repairMissingRecordedToEmpty: true,
+    );
+    _emitUi(
+      'Integrity repair done. Checked ${summary.checked}. Issues ${summary.issues}. Fixed ${summary.fixed}.',
+    );
+    return summary;
+  }
+
+  Future<IntegritySummary> runIntegrityCheckRepairAll() async {
+    final summary = await integrity.checkPerson(
+      personId: personId,
+      repairMissingRecordedToEmpty: true,
+      repairMissingArchivedToEmpty: true,
+    );
+    _emitUi(
+      'Integrity repair all done. Checked ${summary.checked}. Issues ${summary.issues}. Fixed ${summary.fixed}.',
     );
     return summary;
   }

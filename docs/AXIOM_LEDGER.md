@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: 02bc808
+- Current reference commit: 81047d8
 
 ## Core Invariants
 - Never zero empty slots
@@ -92,6 +92,8 @@
 - repairRecordedIssueToEmpty()
 - repairArchivedIssueToEmpty()
 - runIntegrityCheck()
+- runIntegrityCheckRepairRecorded()
+- runIntegrityCheckRepairAll()
 
 ### IntegrityService
 - checkPerson()
@@ -117,12 +119,13 @@
 - Shared constants normalized across integrity layer
 - Strict enforcement mode prepared in repo and integrity events
 - Recovery and repair domain paths for missing recorded and archived items
+- Recovery actions exposed in integrity dialog
 
-### Commit 4B purpose
-- Expose repair actions in the integrity dialog
-- Let users repair broken recorded and archived references back to empty
-- Keep delete as destructive option
-- Provide immediate feedback through existing snackbar mechanism
+### Commit 4C purpose
+- Make integrity actions available from a single app level menu
+- Allow one click check only, repair active, or repair all
+- Keep delete clearly separate from repair
+- Improve speed of field recovery without changing domain rules
 
 ## Enforcement Model
 ### Soft
@@ -148,9 +151,9 @@
 
 ## Next Planned Work
 ### Next commit
-- Optional one click repair during integrity checks
-- Recovery summaries and more explicit repair result messages
-- Better distinction between destructive delete and repair
+- Distinguish delete and repair even more clearly in UI
+- Optional confirmation for destructive delete
+- Better repair result summaries
 
 ### Later
 - Sleeves
