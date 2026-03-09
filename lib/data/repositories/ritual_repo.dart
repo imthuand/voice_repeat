@@ -36,9 +36,13 @@ extension RitualEventTypeName on RitualEventType {
 }
 
 class RitualRepo {
-  final AppDb db;
+  RitualRepo(
+    this.db, {
+    this.enforcementMode = EnforcementMode.soft,
+  });
 
-  RitualRepo(this.db);
+  final AppDb db;
+  final String enforcementMode;
 
   int _now() => DateTime.now().millisecondsSinceEpoch;
 
@@ -50,11 +54,25 @@ class RitualRepo {
   static const String integrityMissingPath = IntegrityStatus.missingPath;
   static const String integrityMissingFile = IntegrityStatus.missingFile;
 
+  bool get isStrict => enforcementMode == EnforcementMode.strict;
+
   String _normalizeSearchText(String s) => s.trim().toLowerCase();
 
   void _ensureState(String actual, Set<String> allowed, String action) {
     if (!allowed.contains(actual)) {
       throw StateError('Invalid state for $action: $actual');
+    }
+  }
+
+  void _requireNonEmptyPath(String path, String action, String fieldName) {
+    if (path.trim().isEmpty) {
+      throw StateError('Invalid $action: $fieldName must not be empty');
+    }
+  }
+
+  void _requirePositiveSize(int sizeBytes, String action) {
+    if (sizeBytes <= 0) {
+      throw StateError('Invalid $action: sizeBytes must be greater than zero');
     }
   }
 
@@ -189,7 +207,7 @@ class RitualRepo {
             path: Value(pathValue),
             sizeBytes: Value(sizeValue),
             source: const Value(EventSource.repo),
-            enforcementMode: const Value(EnforcementMode.soft),
+            enforcementMode: Value(enforcementMode),
           ),
         );
   }
@@ -233,6 +251,11 @@ class RitualRepo {
     required int sizeBytes,
   }) async {
     final now = _now();
+
+    if (isStrict) {
+      _requireNonEmptyPath(activePath, 'setRecorded', 'activePath');
+      _requirePositiveSize(sizeBytes, 'setRecorded');
+    }
 
     await db.transaction(() async {
       final it = await _getByIdTx(itemId);
@@ -302,6 +325,10 @@ class RitualRepo {
   }) async {
     final now = _now();
 
+    if (isStrict) {
+      _requireNonEmptyPath(archivedPath, 'setArchived', 'archivedPath');
+    }
+
     await db.transaction(() async {
       final it = await _getByIdTx(itemId);
       _ensureState(it.state, {stateRecorded}, 'setArchived');
@@ -334,6 +361,10 @@ class RitualRepo {
     required String activePath,
   }) async {
     final now = _now();
+
+    if (isStrict) {
+      _requireNonEmptyPath(activePath, 'restore', 'activePath');
+    }
 
     await db.transaction(() async {
       final it = await _getByIdTx(itemId);

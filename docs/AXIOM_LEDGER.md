@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: ed3219d
+- Current reference commit: 7362cfb
 
 ## Core Invariants
 - Never zero empty slots
@@ -110,18 +110,30 @@
 - Manual integrity check from UI
 - Integrity issue badge in UI
 - Snackbar based user feedback in controller and screen
+- Shared constants normalized across integrity layer
 
-### Stabilization focus now
-- Ledger aligned with real codebase
-- Shared constants as single source of truth
-- integrity_service.dart normalized to constants.dart
-- No intended user visible behavior change
+### Commit 3 purpose
+- Prepare strict enforcement mode without changing user visible flows
+- Make enforcement mode explicit in repo and integrity events
+- Add central validation guards for path and size dependent transitions
+- Keep runtime default in soft mode
+
+## Enforcement Model
+### Soft
+- Prefer resilience
+- Record issues and continue where safe
+- Current default mode
+
+### Strict
+- Fail fast on invalid transition inputs
+- Reject missing paths and zero sized recordings at repo boundary
+- Improve auditability and future repair workflows
 
 ## Next Planned Work
 ### Next commit
-- Strict enforcement preparation
-- Reduce silent fallback behavior
-- Prepare recovery and repair paths
+- Recovery and repair paths
+- Controlled clear or repair actions for broken items
+- Better reconciliation actions from UI
 
 ### Later
 - Sleeves

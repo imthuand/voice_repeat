@@ -158,7 +158,7 @@ class IntegrityService {
             path: const Value(''),
             sizeBytes: const Value(0),
             source: const Value(EventSource.integrity),
-            enforcementMode: const Value(EnforcementMode.soft),
+            enforcementMode: Value(repo.enforcementMode),
           ),
         );
   }
@@ -190,7 +190,7 @@ class IntegrityService {
             path: Value(expectedPath),
             sizeBytes: Value(item.sizeBytes),
             source: const Value(EventSource.integrity),
-            enforcementMode: const Value(EnforcementMode.soft),
+            enforcementMode: Value(repo.enforcementMode),
           ),
         );
   }
