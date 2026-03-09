@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:drift/drift.dart';
+
+import '../../domain/constants.dart';
 import '../db/app_db.dart';
 import '../ids.dart';
 
@@ -14,21 +16,39 @@ enum RitualEventType {
   renamed,
 }
 
+extension RitualEventTypeName on RitualEventType {
+  String get eventName {
+    switch (this) {
+      case RitualEventType.recorded:
+        return RitualEventName.recorded;
+      case RitualEventType.played:
+        return RitualEventName.played;
+      case RitualEventType.archived:
+        return RitualEventName.archived;
+      case RitualEventType.restored:
+        return RitualEventName.restored;
+      case RitualEventType.deleted:
+        return RitualEventName.deleted;
+      case RitualEventType.renamed:
+        return RitualEventName.renamed;
+    }
+  }
+}
+
 class RitualRepo {
   final AppDb db;
+
   RitualRepo(this.db);
 
   int _now() => DateTime.now().millisecondsSinceEpoch;
 
-  // Item states
-  static const String stateEmpty = 'empty';
-  static const String stateRecorded = 'recorded';
-  static const String stateArchived = 'archived';
+  static const String stateEmpty = ItemState.empty;
+  static const String stateRecorded = ItemState.recorded;
+  static const String stateArchived = ItemState.archived;
 
-  // Integrity statuses (UI + Services rely on these)
-  static const String integrityOk = 'ok';
-  static const String integrityMissingPath = 'missing_path';
-  static const String integrityMissingFile = 'missing_file';
+  static const String integrityOk = IntegrityStatus.ok;
+  static const String integrityMissingPath = IntegrityStatus.missingPath;
+  static const String integrityMissingFile = IntegrityStatus.missingFile;
 
   String _normalizeSearchText(String s) => s.trim().toLowerCase();
 
@@ -37,8 +57,6 @@ class RitualRepo {
       throw StateError('Invalid state for $action: $actual');
     }
   }
-
-  // ---------- Bootstrap ----------
 
   Future<String> ensureDefaultPerson() async {
     final existing = await db.select(db.persons).get();
@@ -115,8 +133,6 @@ class RitualRepo {
         );
   }
 
-  // ---------- Queries ----------
-
   Stream<List<RitualItem>> watchActive(String personId) {
     return (db.select(db.ritualItems)
           ..where((t) => t.personId.equals(personId) & t.state.isNotValue(stateArchived))
@@ -137,8 +153,6 @@ class RitualRepo {
   Future<RitualItem> _getByIdTx(String itemId) {
     return (db.select(db.ritualItems)..where((t) => t.itemId.equals(itemId))).getSingle();
   }
-
-  // ---------- Events ----------
 
   Future<void> logEvent({
     required String personId,
@@ -166,7 +180,7 @@ class RitualRepo {
             eventId: Value(Ids.v4()),
             itemId: Value(itemId),
             personId: Value(personId),
-            eventType: Value(type.name),
+            eventType: Value(type.eventName),
             timestamp: Value(now),
             metadata: metadata == null ? const Value(null) : Value(jsonEncode(metadata)),
             sleeveId: Value(sleeve),
@@ -174,13 +188,11 @@ class RitualRepo {
             itemState: Value(stateValue),
             path: Value(pathValue),
             sizeBytes: Value(sizeValue),
-            source: const Value('repo'),
-            enforcementMode: const Value('soft'),
+            source: const Value(EventSource.repo),
+            enforcementMode: const Value(EnforcementMode.soft),
           ),
         );
   }
-
-  // ---------- Mutations ----------
 
   Future<void> rename({
     required String personId,
@@ -199,7 +211,6 @@ class RitualRepo {
         RitualItemsCompanion(
           label: Value(label),
           searchText: Value(search),
-          // rename is not an integrity changing operation, but we mark checkedAt to show recency
           integrityCheckedAt: Value(now),
           updatedAt: Value(now),
         ),
@@ -240,11 +251,8 @@ class RitualRepo {
           sizeBytes: Value(sizeBytes),
           recordedAt: Value(now),
           archivedAt: const Value(null),
-
-          // reset integrity on successful write
           integrityStatus: const Value(integrityOk),
           integrityCheckedAt: Value(now),
-
           updatedAt: Value(now),
         ),
       );
@@ -304,10 +312,8 @@ class RitualRepo {
           archivedPath: Value(archivedPath),
           activePath: const Value(null),
           archivedAt: Value(now),
-
           integrityStatus: const Value(integrityOk),
           integrityCheckedAt: Value(now),
-
           updatedAt: Value(now),
         ),
       );
@@ -340,10 +346,8 @@ class RitualRepo {
           archivedPath: const Value(null),
           recordedAt: Value(now),
           archivedAt: const Value(null),
-
           integrityStatus: const Value(integrityOk),
           integrityCheckedAt: Value(now),
-
           updatedAt: Value(now),
         ),
       );
@@ -358,7 +362,6 @@ class RitualRepo {
     });
   }
 
-  /// Clear keeps the slot row, but resets it to empty
   Future<void> clearToEmpty({
     required String personId,
     required String itemId,
@@ -381,10 +384,8 @@ class RitualRepo {
           lastUsedAt: const Value(null),
           recordedAt: const Value(null),
           archivedAt: const Value(null),
-
           integrityStatus: const Value(integrityOk),
           integrityCheckedAt: Value(now),
-
           updatedAt: Value(now),
         ),
       );
@@ -400,7 +401,6 @@ class RitualRepo {
     });
   }
 
-  /// Delete removes the slot row completely so the button disappears
   Future<void> deleteSlot({
     required String personId,
     required String itemId,

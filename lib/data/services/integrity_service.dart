@@ -1,18 +1,13 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+
+import '../../domain/constants.dart';
+import '../../infrastructure/file_storage.dart';
 import '../db/app_db.dart';
 import '../ids.dart';
 import '../repositories/ritual_repo.dart';
-import '../../infrastructure/file_storage.dart';
 
-class IntegrityStatus {
-  static const String ok = 'ok';
-  static const String missingPath = 'missing_path';
-  static const String missingFile = 'missing_file';
-}
-
-/// Summary used by controller UI message
 class IntegritySummary {
   final int checked;
   final int issues;
@@ -38,11 +33,9 @@ class IntegrityService {
 
   int _now() => DateTime.now().millisecondsSinceEpoch;
 
-  /// Reconciliation light:
-  /// - checks paths referenced by DB against filesystem
-  /// - writes integrityStatus + integrityCheckedAt
-  /// - logs summary and issue events into RitualEvents (as plain eventType strings)
-  Future<IntegritySummary> checkPerson({required String personId}) async {
+  Future<IntegritySummary> checkPerson({
+    required String personId,
+  }) async {
     final now = _now();
 
     final items = await (db.select(db.ritualItems)
@@ -54,101 +47,118 @@ class IntegrityService {
     var fixed = 0;
 
     await db.transaction(() async {
-      for (final it in items) {
+      for (final item in items) {
         checked++;
 
-        final expectedPath = _expectedPath(it);
-        final status = await _computeStatus(it.state, expectedPath);
+        final result = await _computeIntegrity(item);
 
-        if (status != IntegrityStatus.ok) {
+        await (db.update(db.ritualItems)..where((t) => t.itemId.equals(item.itemId))).write(
+          RitualItemsCompanion(
+            integrityStatus: Value(result.status),
+            integrityCheckedAt: Value(now),
+            updatedAt: Value(now),
+          ),
+        );
+
+        if (result.status != IntegrityStatus.ok) {
           issues++;
-        }
 
-        // Update DB only if needed
-        final needsUpdate =
-            (it.integrityStatus != status) || (it.integrityCheckedAt == null);
-
-        if (needsUpdate) {
-          await (db.update(db.ritualItems)..where((t) => t.itemId.equals(it.itemId))).write(
-            RitualItemsCompanion(
-              integrityStatus: Value(status),
-              integrityCheckedAt: Value(now),
-              updatedAt: Value(now),
-            ),
-          );
-        } else {
-          // still update checkedAt for recency if you want, but keeping it minimal here
-          await (db.update(db.ritualItems)..where((t) => t.itemId.equals(it.itemId))).write(
-            RitualItemsCompanion(
-              integrityCheckedAt: Value(now),
-              updatedAt: Value(now),
-            ),
-          );
-        }
-
-        if (status != IntegrityStatus.ok) {
           await _logIntegrityEvent(
             personId: personId,
-            item: it,
-            eventType: 'integrityIssueDetected',
-            metadata: {
-              'status': status,
-              'state': it.state,
-              'path': expectedPath ?? '',
-            },
+            item: item,
+            status: result.status,
+            expectedPath: result.expectedPath,
           );
         }
       }
 
       await _logSummaryEvent(
         personId: personId,
-        now: now,
         checked: checked,
         issues: issues,
         fixed: fixed,
+        now: now,
       );
     });
 
-    return IntegritySummary(checked: checked, issues: issues, fixed: fixed);
+    return IntegritySummary(
+      checked: checked,
+      issues: issues,
+      fixed: fixed,
+    );
   }
 
-  String? _expectedPath(RitualItem it) {
-    if (it.state == RitualRepo.stateRecorded) return it.activePath;
-    if (it.state == RitualRepo.stateArchived) return it.archivedPath;
-    return null;
-  }
+  Future<_IntegrityResult> _computeIntegrity(RitualItem item) async {
+    if (item.state == ItemState.empty) {
+      return const _IntegrityResult(
+        status: IntegrityStatus.ok,
+        expectedPath: '',
+      );
+    }
 
-  Future<String> _computeStatus(String state, String? path) async {
-    if (state == RitualRepo.stateEmpty) return IntegrityStatus.ok;
+    if (item.state == ItemState.recorded) {
+      if (item.activePath == null || item.activePath!.isEmpty) {
+        return const _IntegrityResult(
+          status: IntegrityStatus.missingPath,
+          expectedPath: '',
+        );
+      }
 
-    if (path == null || path.isEmpty) return IntegrityStatus.missingPath;
+      final exists = await storage.fileExists(item.activePath!);
+      return _IntegrityResult(
+        status: exists ? IntegrityStatus.ok : IntegrityStatus.missingFile,
+        expectedPath: item.activePath!,
+      );
+    }
 
-    final exists = await storage.fileExists(path);
-    if (!exists) return IntegrityStatus.missingFile;
+    if (item.state == ItemState.archived) {
+      if (item.archivedPath == null || item.archivedPath!.isEmpty) {
+        return const _IntegrityResult(
+          status: IntegrityStatus.missingPath,
+          expectedPath: '',
+        );
+      }
 
-    return IntegrityStatus.ok;
+      final exists = await storage.fileExists(item.archivedPath!);
+      return _IntegrityResult(
+        status: exists ? IntegrityStatus.ok : IntegrityStatus.missingFile,
+        expectedPath: item.archivedPath!,
+      );
+    }
+
+    return const _IntegrityResult(
+      status: IntegrityStatus.pathMismatch,
+      expectedPath: '',
+    );
   }
 
   Future<void> _logSummaryEvent({
     required String personId,
-    required int now,
     required int checked,
     required int issues,
     required int fixed,
+    required int now,
   }) async {
     await db.into(db.ritualEvents).insert(
-          RitualEventsCompanion.insert(
-            eventId: Ids.v4(),
-            itemId: 'system',
-            personId: personId,
-            eventType: 'integrityChecked',
-            timestamp: now,
+          RitualEventsCompanion(
+            eventId: Value(Ids.v4()),
+            itemId: const Value(ReservedItemId.system),
+            personId: Value(personId),
+            eventType: const Value(RitualEventName.integrityChecked),
+            timestamp: Value(now),
             metadata: Value(jsonEncode({
               'checked': checked,
               'issues': issues,
               'fixed': fixed,
               'v': 1,
             })),
+            sleeveId: const Value('default'),
+            slotIndex: const Value(-1),
+            itemState: const Value(''),
+            path: const Value(''),
+            sizeBytes: const Value(0),
+            source: const Value(EventSource.integrity),
+            enforcementMode: const Value(EnforcementMode.soft),
           ),
         );
   }
@@ -156,29 +166,42 @@ class IntegrityService {
   Future<void> _logIntegrityEvent({
     required String personId,
     required RitualItem item,
-    required String eventType,
-    Map<String, dynamic>? metadata,
+    required String status,
+    required String expectedPath,
   }) async {
     final now = _now();
-
-    final path = (item.state == RitualRepo.stateArchived) ? (item.archivedPath ?? '') : (item.activePath ?? '');
 
     await db.into(db.ritualEvents).insert(
           RitualEventsCompanion(
             eventId: Value(Ids.v4()),
             itemId: Value(item.itemId),
             personId: Value(personId),
-            eventType: Value(eventType),
+            eventType: const Value(RitualEventName.integrityIssueDetected),
             timestamp: Value(now),
-            metadata: metadata == null ? const Value(null) : Value(jsonEncode(metadata)),
+            metadata: Value(jsonEncode({
+              'status': status,
+              'state': item.state,
+              'expectedPath': expectedPath,
+              'v': 1,
+            })),
             sleeveId: Value(item.sleeveId),
             slotIndex: Value(item.slotIndex),
             itemState: Value(item.state),
-            path: Value(path),
+            path: Value(expectedPath),
             sizeBytes: Value(item.sizeBytes),
-            source: const Value('integrity'),
-            enforcementMode: const Value('soft'),
+            source: const Value(EventSource.integrity),
+            enforcementMode: const Value(EnforcementMode.soft),
           ),
         );
   }
+}
+
+class _IntegrityResult {
+  final String status;
+  final String expectedPath;
+
+  const _IntegrityResult({
+    required this.status,
+    required this.expectedPath,
+  });
 }

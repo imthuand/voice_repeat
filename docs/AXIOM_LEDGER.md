@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: eb33100
+- Current reference commit: d0b9b28
 
 ## Core Invariants
 - Never zero empty slots
@@ -20,13 +20,47 @@
 
 ## Data Model
 ### schemaVersion
-- Current: 2
-- Planned next: 3 for integrity layer
+- Current: 3
 
 ### Tables
 - Persons
 - RitualItems
 - RitualEvents
+
+### RitualItems notable fields
+- itemId
+- personId
+- slotIndex
+- label
+- state
+- activePath
+- archivedPath
+- sizeBytes
+- usageCountTotal
+- lastUsedAt
+- sleeveId
+- searchText
+- recordedAt
+- archivedAt
+- integrityStatus
+- integrityCheckedAt
+- createdAt
+- updatedAt
+
+### RitualEvents notable fields
+- eventId
+- itemId
+- personId
+- eventType
+- timestamp
+- metadata
+- sleeveId
+- slotIndex
+- itemState
+- path
+- sizeBytes
+- source
+- enforcementMode
 
 ## Public APIs
 ### RitualRepo
@@ -42,6 +76,7 @@
 - restore()
 - clearToEmpty()
 - deleteSlot()
+- logEvent()
 
 ### VoiceButtonsController
 - startHold()
@@ -52,6 +87,10 @@
 - deleteActive()
 - deleteArchived()
 - clearSlotKeepButton()
+- runIntegrityCheck()
+
+### IntegrityService
+- checkPerson()
 
 ## Current Technical Structure
 - UI: voice_buttons_screen.dart
@@ -60,20 +99,31 @@
 - Persistence: app_db.dart
 - File storage: file_storage.dart
 - Audio boundary: audio_service.dart
+- Integrity detection: integrity_service.dart
 - Verification script: tool/verify.bat
 
+## Current Branch Stabilization Status
+### Already present in codebase
+- schemaVersion 3
+- integrityStatus on RitualItems
+- integrityCheckedAt on RitualItems
+- fileExists in FileStorage
+- listActiveFiles in FileStorage
+- listArchivedFiles in FileStorage
+
+### Commit 2A purpose
+- Reconcile ledger with real codebase
+- Move shared constants to one source of truth
+- Normalize repo and integrity service to shared constants
+- No intended user visible behavior change
+
 ## Next Planned Work
-### Commit 1
-- Lock contract files
-- Expand shared constants
-- No behavior change
-
-### Commit 2
-- Integrity layer in Drift
-- Reconciliation light service
-- Detection only, no auto fix
-
-### Commit 3
+### Commit 2B
 - Minimal UI surfacing for integrity checks
 - Badge and manual check action
 - Error feedback improvements
+
+### Commit 3
+- Strict enforcement preparation
+- No silent fallback paths where avoidable
+- Better auditability

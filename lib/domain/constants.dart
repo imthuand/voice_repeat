@@ -14,6 +14,9 @@ class IntegrityStatus {
 class EventSource {
   static const repo = 'repo';
   static const integrity = 'integrity';
+}
+
+class ReservedItemId {
   static const system = 'system';
 }
 
