@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: d0b9b28
+- Current reference commit: ed3219d
 
 ## Core Invariants
 - Never zero empty slots
@@ -102,28 +102,28 @@
 - Integrity detection: integrity_service.dart
 - Verification script: tool/verify.bat
 
-## Current Branch Stabilization Status
-### Already present in codebase
+## Current Branch Status
+### Already implemented
 - schemaVersion 3
-- integrityStatus on RitualItems
-- integrityCheckedAt on RitualItems
-- fileExists in FileStorage
-- listActiveFiles in FileStorage
-- listArchivedFiles in FileStorage
+- Integrity status fields persisted on RitualItems
+- File existence checks in FileStorage
+- Manual integrity check from UI
+- Integrity issue badge in UI
+- Snackbar based user feedback in controller and screen
 
-### Commit 2A purpose
-- Reconcile ledger with real codebase
-- Move shared constants to one source of truth
-- Normalize repo and integrity service to shared constants
+### Stabilization focus now
+- Ledger aligned with real codebase
+- Shared constants as single source of truth
+- integrity_service.dart normalized to constants.dart
 - No intended user visible behavior change
 
 ## Next Planned Work
-### Commit 2B
-- Minimal UI surfacing for integrity checks
-- Badge and manual check action
-- Error feedback improvements
-
-### Commit 3
+### Next commit
 - Strict enforcement preparation
-- No silent fallback paths where avoidable
-- Better auditability
+- Reduce silent fallback behavior
+- Prepare recovery and repair paths
+
+### Later
+- Sleeves
+- Scheduling and alarms
+- richer reconciliation and repair workflows
