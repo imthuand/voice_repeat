@@ -76,7 +76,9 @@ class RitualRepo {
     }.contains(actual)) {
       return;
     }
-    throw StateError('Invalid $action: integrityStatus is not repairable: $actual');
+    throw StateError(
+      'Invalid $action: integrityStatus is not repairable: $actual',
+    );
   }
 
   void _requireNonEmptyPath(String path, String action, String fieldName) {
@@ -113,13 +115,37 @@ class RitualRepo {
     return id;
   }
 
+  Future<void> ensureDefaultSleeve(String personId) async {
+    final existing = await (db.select(db.sleeves)
+          ..where((t) => t.sleeveId.equals(SleeveDefaults.defaultId)))
+        .getSingleOrNull();
+
+    if (existing != null) return;
+
+    final now = _now();
+    await db.into(db.sleeves).insert(
+          SleevesCompanion.insert(
+            sleeveId: SleeveDefaults.defaultId,
+            personId: personId,
+            name: SleeveDefaults.defaultName,
+            sortOrder: const Value(0),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+  }
+
   Future<void> ensureInitialSlots(String personId, {int initial = 4}) async {
     final now = _now();
+
+    await ensureDefaultSleeve(personId);
 
     await db.transaction(() async {
       for (var slot = 0; slot < initial; slot++) {
         final exists = await (db.select(db.ritualItems)
-              ..where((t) => t.personId.equals(personId) & t.slotIndex.equals(slot)))
+              ..where((t) =>
+                  t.personId.equals(personId) & t.slotIndex.equals(slot)))
             .getSingleOrNull();
 
         if (exists != null) continue;
@@ -129,6 +155,7 @@ class RitualRepo {
                 itemId: Ids.v4(),
                 personId: personId,
                 slotIndex: slot,
+                sleeveId: const Value(SleeveDefaults.defaultId),
                 createdAt: now,
                 updatedAt: now,
               ),
@@ -136,22 +163,40 @@ class RitualRepo {
             );
       }
 
-      await _ensureAtLeastOneEmptyTx(personId);
+      await _ensureAtLeastOneEmptyTx(
+        personId,
+        sleeveId: SleeveDefaults.defaultId,
+      );
     });
   }
 
-  Future<void> ensureAtLeastOneEmpty(String personId) async {
+  Future<void> ensureAtLeastOneEmpty(
+    String personId, {
+    required String sleeveId,
+  }) async {
     await db.transaction(() async {
-      await _ensureAtLeastOneEmptyTx(personId);
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: sleeveId);
     });
   }
 
-  Future<void> _ensureAtLeastOneEmptyTx(String personId) async {
-    final items = await (db.select(db.ritualItems)..where((t) => t.personId.equals(personId))).get();
+  Future<void> _ensureAtLeastOneEmptyTx(
+    String personId, {
+    required String sleeveId,
+  }) async {
+    final items = await (db.select(db.ritualItems)
+          ..where((t) =>
+              t.personId.equals(personId) & t.sleeveId.equals(sleeveId)))
+        .get();
+
     final hasEmpty = items.any((x) => x.state == stateEmpty);
     if (hasEmpty) return;
 
-    final nextSlot = (items.map((e) => e.slotIndex).fold<int>(-1, max)) + 1;
+    final allPersonItems = await (db.select(db.ritualItems)
+          ..where((t) => t.personId.equals(personId)))
+        .get();
+
+    final nextSlot =
+        (allPersonItems.map((e) => e.slotIndex).fold<int>(-1, max)) + 1;
     final now = _now();
 
     await db.into(db.ritualItems).insert(
@@ -159,6 +204,7 @@ class RitualRepo {
             itemId: Ids.v4(),
             personId: personId,
             slotIndex: nextSlot,
+            sleeveId: Value(sleeveId),
             createdAt: now,
             updatedAt: now,
           ),
@@ -166,16 +212,143 @@ class RitualRepo {
         );
   }
 
-  Stream<List<RitualItem>> watchActive(String personId) {
+  Stream<List<Sleeve>> watchSleeves(String personId) {
+    return (db.select(db.sleeves)
+          ..where((t) => t.personId.equals(personId))
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.sortOrder),
+            (t) => OrderingTerm(expression: t.name),
+          ]))
+        .watch();
+  }
+
+  Future<String> createSleeve({
+    required String personId,
+    required String name,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      throw StateError('Sleeve name must not be empty');
+    }
+
+    final now = _now();
+    final existing = await (db.select(db.sleeves)
+          ..where((t) =>
+              t.personId.equals(personId) & t.name.equals(trimmed)))
+        .getSingleOrNull();
+
+    if (existing != null) {
+      throw StateError('A sleeve with this name already exists');
+    }
+
+    final sleeves = await (db.select(db.sleeves)
+          ..where((t) => t.personId.equals(personId)))
+        .get();
+    final nextSort =
+        (sleeves.map((e) => e.sortOrder).fold<int>(-1, max)) + 1;
+    final sleeveId = Ids.v4();
+
+    await db.transaction(() async {
+      await db.into(db.sleeves).insert(
+            SleevesCompanion.insert(
+              sleeveId: sleeveId,
+              personId: personId,
+              name: trimmed,
+              sortOrder: Value(nextSort),
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: sleeveId);
+    });
+
+    return sleeveId;
+  }
+
+  Future<void> renameSleeve({
+    required String personId,
+    required String sleeveId,
+    required String name,
+  }) async {
+    if (sleeveId == SleeveDefaults.defaultId) {
+      throw StateError('Default sleeve cannot be renamed');
+    }
+
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      throw StateError('Sleeve name must not be empty');
+    }
+
+    final existing = await (db.select(db.sleeves)
+          ..where((t) =>
+              t.personId.equals(personId) & t.name.equals(trimmed)))
+        .getSingleOrNull();
+
+    if (existing != null && existing.sleeveId != sleeveId) {
+      throw StateError('A sleeve with this name already exists');
+    }
+
+    await (db.update(db.sleeves)..where((t) => t.sleeveId.equals(sleeveId)))
+        .write(
+      SleevesCompanion(
+        name: Value(trimmed),
+        updatedAt: Value(_now()),
+      ),
+    );
+  }
+
+  Future<void> deleteSleeve({
+    required String personId,
+    required String sleeveId,
+  }) async {
+    if (sleeveId == SleeveDefaults.defaultId) {
+      throw StateError('Default sleeve cannot be deleted');
+    }
+
+    final items = await (db.select(db.ritualItems)
+          ..where((t) =>
+              t.personId.equals(personId) & t.sleeveId.equals(sleeveId)))
+        .get();
+
+    final hasNonEmpty = items.any((e) => e.state != stateEmpty);
+    if (hasNonEmpty) {
+      throw StateError('Sleeve can only be deleted when all items are empty');
+    }
+
+    await db.transaction(() async {
+      await (db.delete(db.ritualItems)
+            ..where((t) =>
+                t.personId.equals(personId) & t.sleeveId.equals(sleeveId)))
+          .go();
+
+      await (db.delete(db.sleeves)..where((t) => t.sleeveId.equals(sleeveId)))
+          .go();
+    });
+  }
+
+  Stream<List<RitualItem>> watchActive(
+    String personId, {
+    required String sleeveId,
+  }) {
     return (db.select(db.ritualItems)
-          ..where((t) => t.personId.equals(personId) & t.state.isNotValue(stateArchived))
+          ..where((t) =>
+              t.personId.equals(personId) &
+              t.sleeveId.equals(sleeveId) &
+              t.state.isNotValue(stateArchived))
           ..orderBy([(t) => OrderingTerm(expression: t.slotIndex)]))
         .watch();
   }
 
-  Stream<List<RitualItem>> watchArchived(String personId) {
+  Stream<List<RitualItem>> watchArchived(
+    String personId, {
+    required String sleeveId,
+  }) {
     return (db.select(db.ritualItems)
-          ..where((t) => t.personId.equals(personId) & t.state.equals(stateArchived))
+          ..where((t) =>
+              t.personId.equals(personId) &
+              t.sleeveId.equals(sleeveId) &
+              t.state.equals(stateArchived))
           ..orderBy([
             (t) => OrderingTerm(expression: t.archivedAt, mode: OrderingMode.desc),
             (t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc),
@@ -184,7 +357,8 @@ class RitualRepo {
   }
 
   Future<RitualItem> _getByIdTx(String itemId) {
-    return (db.select(db.ritualItems)..where((t) => t.itemId.equals(itemId))).getSingle();
+    return (db.select(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+        .getSingle();
   }
 
   Future<void> logEvent({
@@ -197,12 +371,15 @@ class RitualRepo {
 
     RitualItem? it;
     try {
-      it = await (db.select(db.ritualItems)..where((t) => t.itemId.equals(itemId))).getSingleOrNull();
+      it = await (db.select(db.ritualItems)
+            ..where((t) => t.itemId.equals(itemId)))
+          .getSingleOrNull();
     } catch (_) {}
 
-    final computedPath = (it?.state == stateArchived) ? it?.archivedPath : it?.activePath;
+    final computedPath =
+        (it?.state == stateArchived) ? it?.archivedPath : it?.activePath;
 
-    final sleeve = it?.sleeveId ?? 'default';
+    final sleeve = it?.sleeveId ?? SleeveDefaults.defaultId;
     final slotValue = it?.slotIndex ?? -1;
     final stateValue = it?.state ?? '';
     final pathValue = computedPath ?? '';
@@ -240,7 +417,8 @@ class RitualRepo {
 
       final search = _normalizeSearchText(label);
 
-      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId))).write(
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+          .write(
         RitualItemsCompanion(
           label: Value(label),
           searchText: Value(search),
@@ -274,12 +452,17 @@ class RitualRepo {
 
     await db.transaction(() async {
       final it = await _getByIdTx(itemId);
-      _ensureState(it.state, {stateEmpty, stateArchived, stateRecorded}, 'setRecorded');
+      _ensureState(
+        it.state,
+        {stateEmpty, stateArchived, stateRecorded},
+        'setRecorded',
+      );
 
       final effectiveLabel = label.isEmpty ? it.label : label;
       final search = _normalizeSearchText(effectiveLabel);
 
-      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId))).write(
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+          .write(
         RitualItemsCompanion(
           label: Value(effectiveLabel),
           searchText: Value(search),
@@ -302,7 +485,7 @@ class RitualRepo {
         metadata: {'sizeBytes': sizeBytes},
       );
 
-      await _ensureAtLeastOneEmptyTx(personId);
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: it.sleeveId);
     });
   }
 
@@ -316,7 +499,8 @@ class RitualRepo {
       final it = await _getByIdTx(itemId);
       _ensureState(it.state, {stateRecorded, stateArchived}, 'markPlayed');
 
-      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId))).write(
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+          .write(
         RitualItemsCompanion(
           usageCountTotal: Value(it.usageCountTotal + 1),
           lastUsedAt: Value(now),
@@ -348,7 +532,8 @@ class RitualRepo {
       final it = await _getByIdTx(itemId);
       _ensureState(it.state, {stateRecorded}, 'setArchived');
 
-      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId))).write(
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+          .write(
         RitualItemsCompanion(
           state: const Value(stateArchived),
           archivedPath: Value(archivedPath),
@@ -366,7 +551,7 @@ class RitualRepo {
         type: RitualEventType.archived,
       );
 
-      await _ensureAtLeastOneEmptyTx(personId);
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: it.sleeveId);
     });
   }
 
@@ -385,7 +570,8 @@ class RitualRepo {
       final it = await _getByIdTx(itemId);
       _ensureState(it.state, {stateArchived}, 'restore');
 
-      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId))).write(
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+          .write(
         RitualItemsCompanion(
           state: const Value(stateRecorded),
           activePath: Value(activePath),
@@ -404,7 +590,7 @@ class RitualRepo {
         type: RitualEventType.restored,
       );
 
-      await _ensureAtLeastOneEmptyTx(personId);
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: it.sleeveId);
     });
   }
 
@@ -416,9 +602,14 @@ class RitualRepo {
 
     await db.transaction(() async {
       final it = await _getByIdTx(itemId);
-      _ensureState(it.state, {stateEmpty, stateRecorded, stateArchived}, 'clearToEmpty');
+      _ensureState(
+        it.state,
+        {stateEmpty, stateRecorded, stateArchived},
+        'clearToEmpty',
+      );
 
-      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId))).write(
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+          .write(
         RitualItemsCompanion(
           state: const Value(stateEmpty),
           label: const Value(''),
@@ -443,7 +634,7 @@ class RitualRepo {
         metadata: {'mode': 'clear'},
       );
 
-      await _ensureAtLeastOneEmptyTx(personId);
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: it.sleeveId);
     });
   }
 
@@ -453,7 +644,11 @@ class RitualRepo {
   }) async {
     await db.transaction(() async {
       final it = await _getByIdTx(itemId);
-      _ensureState(it.state, {stateEmpty, stateRecorded, stateArchived}, 'deleteSlot');
+      _ensureState(
+        it.state,
+        {stateEmpty, stateRecorded, stateArchived},
+        'deleteSlot',
+      );
 
       await logEvent(
         personId: personId,
@@ -466,9 +661,10 @@ class RitualRepo {
         },
       );
 
-      await (db.delete(db.ritualItems)..where((t) => t.itemId.equals(itemId))).go();
+      await (db.delete(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+          .go();
 
-      await _ensureAtLeastOneEmptyTx(personId);
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: it.sleeveId);
     });
   }
 
@@ -482,9 +678,13 @@ class RitualRepo {
       final it = await _getByIdTx(itemId);
 
       _ensureState(it.state, {stateRecorded}, 'repairMissingRecordedToEmpty');
-      _ensureIntegrityIssue(it.integrityStatus, 'repairMissingRecordedToEmpty');
+      _ensureIntegrityIssue(
+        it.integrityStatus,
+        'repairMissingRecordedToEmpty',
+      );
 
-      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId))).write(
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+          .write(
         RitualItemsCompanion(
           state: const Value(stateEmpty),
           label: Value(it.label),
@@ -511,7 +711,7 @@ class RitualRepo {
         },
       );
 
-      await _ensureAtLeastOneEmptyTx(personId);
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: it.sleeveId);
     });
   }
 
@@ -525,9 +725,13 @@ class RitualRepo {
       final it = await _getByIdTx(itemId);
 
       _ensureState(it.state, {stateArchived}, 'repairMissingArchivedToEmpty');
-      _ensureIntegrityIssue(it.integrityStatus, 'repairMissingArchivedToEmpty');
+      _ensureIntegrityIssue(
+        it.integrityStatus,
+        'repairMissingArchivedToEmpty',
+      );
 
-      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId))).write(
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+          .write(
         RitualItemsCompanion(
           state: const Value(stateEmpty),
           label: Value(it.label),
@@ -554,7 +758,7 @@ class RitualRepo {
         },
       );
 
-      await _ensureAtLeastOneEmptyTx(personId);
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: it.sleeveId);
     });
   }
 }

@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: 5f2524e
+- Current reference commit: e11bf05
 
 ## Core Invariants
 - Never zero empty slots
@@ -20,17 +20,27 @@
 
 ## Data Model
 ### schemaVersion
-- Current: 3
+- Current: 4
 
 ### Tables
 - Persons
+- Sleeves
 - RitualItems
 - RitualEvents
+
+### Sleeves notable fields
+- sleeveId
+- personId
+- name
+- sortOrder
+- createdAt
+- updatedAt
 
 ### RitualItems notable fields
 - itemId
 - personId
 - slotIndex
+- sleeveId
 - label
 - state
 - activePath
@@ -38,7 +48,6 @@
 - sizeBytes
 - usageCountTotal
 - lastUsedAt
-- sleeveId
 - searchText
 - recordedAt
 - archivedAt
@@ -65,8 +74,13 @@
 ## Public APIs
 ### RitualRepo
 - ensureDefaultPerson()
+- ensureDefaultSleeve()
 - ensureInitialSlots()
 - ensureAtLeastOneEmpty()
+- watchSleeves()
+- createSleeve()
+- renameSleeve()
+- deleteSleeve()
 - watchActive()
 - watchArchived()
 - rename()
@@ -81,6 +95,10 @@
 - logEvent()
 
 ### VoiceButtonsController
+- setActiveSleeve()
+- createSleeve()
+- renameActiveSleeve()
+- deleteActiveSleeve()
 - startHold()
 - stopHold()
 - togglePlay()
@@ -109,57 +127,39 @@
 - Verification script: tool/verify.bat
 
 ## Current Branch Status
-### Already implemented
-- schemaVersion 3
-- Integrity status fields persisted on RitualItems
-- File existence checks in FileStorage
-- Manual integrity check from UI
-- Integrity issue badge in UI
-- Snackbar based user feedback in controller and screen
-- Shared constants normalized across integrity layer
-- Strict enforcement mode prepared in repo and integrity events
-- Recovery and repair domain paths for missing recorded and archived items
-- Recovery actions exposed in integrity dialog
-- Global integrity actions for check only, repair active, and repair all
+### Already implemented before sleeves
+- schemaVersion 3 hardening and integrity layer
+- file existence checks in FileStorage
+- manual integrity check from UI
+- integrity issue badge in UI
+- snackbar based user feedback in controller and screen
+- shared constants normalized across integrity layer
+- strict enforcement mode prepared in repo and integrity events
+- recovery and repair domain paths for missing recorded and archived items
+- global integrity actions for check only, repair active, and repair all
+- finalized integrity UX hardening
 
-### Commit 5 purpose
-- Clarify destructive delete versus repair in UI
-- Improve integrity run summaries
-- Surface unresolved issues directly in the screen
-- Final UX hardening before sleeves
+### Sleeve v1 purpose
+- Introduce explicit sleeve domain model
+- Keep default sleeve stable
+- Make active and archived queries sleeve aware
+- Add sleeve switching and sleeve management in UI
+- Keep migration low risk by preserving existing items on default sleeve
+- Avoid advanced sleeve features such as drag and drop, icons, colors, and reordering for now
 
-## Enforcement Model
-### Soft
-- Prefer resilience
-- Record issues and continue where safe
-- Current default mode
-
-### Strict
-- Fail fast on invalid transition inputs
-- Reject missing paths and zero sized recordings at repo boundary
-- Improve auditability and future repair workflows
-
-## Recovery Model
-### Detection
-- Integrity service identifies missing path and missing file states
-
-### Repair
-- Missing recorded item can be repaired to empty
-- Missing archived item can be repaired to empty
-- Repair logs an explicit auto fixed event
-- Repair restores integrity status to ok
-- Repair preserves the invariant that there is always at least one empty slot
-
-## UX Rules
-- Delete is always destructive and must be confirmed
-- Repair is preferred over delete when the issue is a missing reference
-- Global integrity actions must report checked, issues, fixed, and remaining
+## Sleeve Rules
+- Every person has a stable default sleeve
+- New sleeves get one empty slot immediately
+- Default sleeve cannot be deleted
+- A sleeve can only be deleted when all of its items are empty
+- Active and archived views are always filtered by current sleeve
+- Integrity checks still run across the whole person scope
 
 ## Next Planned Work
 ### Next major step
-- Sleeve domain model
-- Sleeve aware queries and navigation
-- Default sleeve remains stable
+- Sleeve refinement and move items between sleeves
+- Optional sleeve reordering
+- Optional sleeve icons and colors
 
 ### Later
 - Scheduling and alarms

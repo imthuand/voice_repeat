@@ -352,6 +352,356 @@ class PersonsCompanion extends UpdateCompanion<Person> {
   }
 }
 
+class $SleevesTable extends Sleeves with TableInfo<$SleevesTable, Sleeve> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SleevesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _sleeveIdMeta =
+      const VerificationMeta('sleeveId');
+  @override
+  late final GeneratedColumn<String> sleeveId = GeneratedColumn<String>(
+      'sleeve_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _personIdMeta =
+      const VerificationMeta('personId');
+  @override
+  late final GeneratedColumn<String> personId = GeneratedColumn<String>(
+      'person_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sortOrderMeta =
+      const VerificationMeta('sortOrder');
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+      'sort_order', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [sleeveId, personId, name, sortOrder, createdAt, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sleeves';
+  @override
+  VerificationContext validateIntegrity(Insertable<Sleeve> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sleeve_id')) {
+      context.handle(_sleeveIdMeta,
+          sleeveId.isAcceptableOrUnknown(data['sleeve_id']!, _sleeveIdMeta));
+    } else if (isInserting) {
+      context.missing(_sleeveIdMeta);
+    }
+    if (data.containsKey('person_id')) {
+      context.handle(_personIdMeta,
+          personId.isAcceptableOrUnknown(data['person_id']!, _personIdMeta));
+    } else if (isInserting) {
+      context.missing(_personIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(_sortOrderMeta,
+          sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {sleeveId};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {personId, name},
+      ];
+  @override
+  Sleeve map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Sleeve(
+      sleeveId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sleeve_id'])!,
+      personId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}person_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      sortOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $SleevesTable createAlias(String alias) {
+    return $SleevesTable(attachedDatabase, alias);
+  }
+}
+
+class Sleeve extends DataClass implements Insertable<Sleeve> {
+  final String sleeveId;
+  final String personId;
+  final String name;
+  final int sortOrder;
+  final int createdAt;
+  final int updatedAt;
+  const Sleeve(
+      {required this.sleeveId,
+      required this.personId,
+      required this.name,
+      required this.sortOrder,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sleeve_id'] = Variable<String>(sleeveId);
+    map['person_id'] = Variable<String>(personId);
+    map['name'] = Variable<String>(name);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  SleevesCompanion toCompanion(bool nullToAbsent) {
+    return SleevesCompanion(
+      sleeveId: Value(sleeveId),
+      personId: Value(personId),
+      name: Value(name),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Sleeve.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Sleeve(
+      sleeveId: serializer.fromJson<String>(json['sleeveId']),
+      personId: serializer.fromJson<String>(json['personId']),
+      name: serializer.fromJson<String>(json['name']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'sleeveId': serializer.toJson<String>(sleeveId),
+      'personId': serializer.toJson<String>(personId),
+      'name': serializer.toJson<String>(name),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  Sleeve copyWith(
+          {String? sleeveId,
+          String? personId,
+          String? name,
+          int? sortOrder,
+          int? createdAt,
+          int? updatedAt}) =>
+      Sleeve(
+        sleeveId: sleeveId ?? this.sleeveId,
+        personId: personId ?? this.personId,
+        name: name ?? this.name,
+        sortOrder: sortOrder ?? this.sortOrder,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  Sleeve copyWithCompanion(SleevesCompanion data) {
+    return Sleeve(
+      sleeveId: data.sleeveId.present ? data.sleeveId.value : this.sleeveId,
+      personId: data.personId.present ? data.personId.value : this.personId,
+      name: data.name.present ? data.name.value : this.name,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Sleeve(')
+          ..write('sleeveId: $sleeveId, ')
+          ..write('personId: $personId, ')
+          ..write('name: $name, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(sleeveId, personId, name, sortOrder, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Sleeve &&
+          other.sleeveId == this.sleeveId &&
+          other.personId == this.personId &&
+          other.name == this.name &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SleevesCompanion extends UpdateCompanion<Sleeve> {
+  final Value<String> sleeveId;
+  final Value<String> personId;
+  final Value<String> name;
+  final Value<int> sortOrder;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int> rowid;
+  const SleevesCompanion({
+    this.sleeveId = const Value.absent(),
+    this.personId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SleevesCompanion.insert({
+    required String sleeveId,
+    required String personId,
+    required String name,
+    this.sortOrder = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
+    this.rowid = const Value.absent(),
+  })  : sleeveId = Value(sleeveId),
+        personId = Value(personId),
+        name = Value(name),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<Sleeve> custom({
+    Expression<String>? sleeveId,
+    Expression<String>? personId,
+    Expression<String>? name,
+    Expression<int>? sortOrder,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (sleeveId != null) 'sleeve_id': sleeveId,
+      if (personId != null) 'person_id': personId,
+      if (name != null) 'name': name,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SleevesCompanion copyWith(
+      {Value<String>? sleeveId,
+      Value<String>? personId,
+      Value<String>? name,
+      Value<int>? sortOrder,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
+      Value<int>? rowid}) {
+    return SleevesCompanion(
+      sleeveId: sleeveId ?? this.sleeveId,
+      personId: personId ?? this.personId,
+      name: name ?? this.name,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (sleeveId.present) {
+      map['sleeve_id'] = Variable<String>(sleeveId.value);
+    }
+    if (personId.present) {
+      map['person_id'] = Variable<String>(personId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SleevesCompanion(')
+          ..write('sleeveId: $sleeveId, ')
+          ..write('personId: $personId, ')
+          ..write('name: $name, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $RitualItemsTable extends RitualItems
     with TableInfo<$RitualItemsTable, RitualItem> {
   @override
@@ -388,7 +738,7 @@ class $RitualItemsTable extends RitualItems
       'state', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('empty'));
+      defaultValue: const Constant(ItemState.empty));
   static const VerificationMeta _activePathMeta =
       const VerificationMeta('activePath');
   @override
@@ -430,7 +780,7 @@ class $RitualItemsTable extends RitualItems
       'sleeve_id', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('default'));
+      defaultValue: const Constant(SleeveDefaults.defaultId));
   static const VerificationMeta _searchTextMeta =
       const VerificationMeta('searchText');
   @override
@@ -458,7 +808,7 @@ class $RitualItemsTable extends RitualItems
       'integrity_status', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('ok'));
+      defaultValue: const Constant(IntegrityStatus.ok));
   static const VerificationMeta _integrityCheckedAtMeta =
       const VerificationMeta('integrityCheckedAt');
   @override
@@ -1263,7 +1613,7 @@ class $RitualEventsTable extends RitualEvents
       'sleeve_id', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('default'));
+      defaultValue: const Constant(SleeveDefaults.defaultId));
   static const VerificationMeta _slotIndexMeta =
       const VerificationMeta('slotIndex');
   @override
@@ -1299,7 +1649,7 @@ class $RitualEventsTable extends RitualEvents
       'source', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('repo'));
+      defaultValue: const Constant(EventSource.repo));
   static const VerificationMeta _enforcementModeMeta =
       const VerificationMeta('enforcementMode');
   @override
@@ -1307,7 +1657,7 @@ class $RitualEventsTable extends RitualEvents
       'enforcement_mode', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('soft'));
+      defaultValue: const Constant(EnforcementMode.soft));
   @override
   List<GeneratedColumn> get $columns => [
         eventId,
@@ -1849,8 +2199,11 @@ abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
   late final $PersonsTable persons = $PersonsTable(this);
+  late final $SleevesTable sleeves = $SleevesTable(this);
   late final $RitualItemsTable ritualItems = $RitualItemsTable(this);
   late final $RitualEventsTable ritualEvents = $RitualEventsTable(this);
+  late final Index idxSleevesPersonSort = Index('idx_sleeves_person_sort',
+      'CREATE INDEX idx_sleeves_person_sort ON sleeves (person_id, sort_order)');
   late final Index idxRitualItemsPersonState = Index(
       'idx_ritual_items_person_state',
       'CREATE INDEX idx_ritual_items_person_state ON ritual_items (person_id, state)');
@@ -1875,8 +2228,10 @@ abstract class _$AppDb extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
         persons,
+        sleeves,
         ritualItems,
         ritualEvents,
+        idxSleevesPersonSort,
         idxRitualItemsPersonState,
         idxRitualItemsPersonArchivedAt,
         idxRitualItemsPersonSleeveState,
@@ -2063,6 +2418,184 @@ typedef $$PersonsTableProcessedTableManager = ProcessedTableManager<
     $$PersonsTableUpdateCompanionBuilder,
     (Person, BaseReferences<_$AppDb, $PersonsTable, Person>),
     Person,
+    PrefetchHooks Function()>;
+typedef $$SleevesTableCreateCompanionBuilder = SleevesCompanion Function({
+  required String sleeveId,
+  required String personId,
+  required String name,
+  Value<int> sortOrder,
+  required int createdAt,
+  required int updatedAt,
+  Value<int> rowid,
+});
+typedef $$SleevesTableUpdateCompanionBuilder = SleevesCompanion Function({
+  Value<String> sleeveId,
+  Value<String> personId,
+  Value<String> name,
+  Value<int> sortOrder,
+  Value<int> createdAt,
+  Value<int> updatedAt,
+  Value<int> rowid,
+});
+
+class $$SleevesTableFilterComposer extends Composer<_$AppDb, $SleevesTable> {
+  $$SleevesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get sleeveId => $composableBuilder(
+      column: $table.sleeveId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get personId => $composableBuilder(
+      column: $table.personId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$SleevesTableOrderingComposer extends Composer<_$AppDb, $SleevesTable> {
+  $$SleevesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get sleeveId => $composableBuilder(
+      column: $table.sleeveId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get personId => $composableBuilder(
+      column: $table.personId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$SleevesTableAnnotationComposer
+    extends Composer<_$AppDb, $SleevesTable> {
+  $$SleevesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get sleeveId =>
+      $composableBuilder(column: $table.sleeveId, builder: (column) => column);
+
+  GeneratedColumn<String> get personId =>
+      $composableBuilder(column: $table.personId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$SleevesTableTableManager extends RootTableManager<
+    _$AppDb,
+    $SleevesTable,
+    Sleeve,
+    $$SleevesTableFilterComposer,
+    $$SleevesTableOrderingComposer,
+    $$SleevesTableAnnotationComposer,
+    $$SleevesTableCreateCompanionBuilder,
+    $$SleevesTableUpdateCompanionBuilder,
+    (Sleeve, BaseReferences<_$AppDb, $SleevesTable, Sleeve>),
+    Sleeve,
+    PrefetchHooks Function()> {
+  $$SleevesTableTableManager(_$AppDb db, $SleevesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SleevesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SleevesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SleevesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> sleeveId = const Value.absent(),
+            Value<String> personId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SleevesCompanion(
+            sleeveId: sleeveId,
+            personId: personId,
+            name: name,
+            sortOrder: sortOrder,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String sleeveId,
+            required String personId,
+            required String name,
+            Value<int> sortOrder = const Value.absent(),
+            required int createdAt,
+            required int updatedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SleevesCompanion.insert(
+            sleeveId: sleeveId,
+            personId: personId,
+            name: name,
+            sortOrder: sortOrder,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$SleevesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDb,
+    $SleevesTable,
+    Sleeve,
+    $$SleevesTableFilterComposer,
+    $$SleevesTableOrderingComposer,
+    $$SleevesTableAnnotationComposer,
+    $$SleevesTableCreateCompanionBuilder,
+    $$SleevesTableUpdateCompanionBuilder,
+    (Sleeve, BaseReferences<_$AppDb, $SleevesTable, Sleeve>),
+    Sleeve,
     PrefetchHooks Function()>;
 typedef $$RitualItemsTableCreateCompanionBuilder = RitualItemsCompanion
     Function({
@@ -2728,6 +3261,8 @@ class $AppDbManager {
   $AppDbManager(this._db);
   $$PersonsTableTableManager get persons =>
       $$PersonsTableTableManager(_db, _db.persons);
+  $$SleevesTableTableManager get sleeves =>
+      $$SleevesTableTableManager(_db, _db.sleeves);
   $$RitualItemsTableTableManager get ritualItems =>
       $$RitualItemsTableTableManager(_db, _db.ritualItems);
   $$RitualEventsTableTableManager get ritualEvents =>

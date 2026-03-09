@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../domain/constants.dart';
 import '../../data/db/app_db.dart';
 import '../../data/repositories/ritual_repo.dart';
 import '../../infrastructure/audio_service.dart';
@@ -42,6 +43,13 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
       personId: widget.personId,
     );
     tabs = TabController(length: 2, vsync: this);
+
+    Future.microtask(() async {
+      await repo.ensureDefaultSleeve(widget.personId);
+      await repo.ensureInitialSlots(widget.personId, initial: 4);
+      if (!mounted) return;
+      setState(() {});
+    });
   }
 
   @override
@@ -89,6 +97,64 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     );
   }
 
+  Future<void> _createSleeveDialog() async {
+    final c = TextEditingController();
+
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('New sleeve'),
+        content: TextField(
+          controller: c,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Morning'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, c.text.trim()),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+
+    if (name == null || name.isEmpty) return;
+    await controller.createSleeve(name);
+  }
+
+  Future<void> _renameSleeveDialog(Sleeve sleeve) async {
+    final c = TextEditingController(text: sleeve.name);
+
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Rename sleeve'),
+        content: TextField(
+          controller: c,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Morning'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, c.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (name == null || name.isEmpty) return;
+    await controller.renameActiveSleeve(name);
+  }
+
   Future<bool> _confirmDeleteDialog() async {
     final result = await showDialog<bool>(
       context: context,
@@ -113,9 +179,34 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     return result ?? false;
   }
 
+  Future<bool> _confirmDeleteSleeveDialog(Sleeve sleeve) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete sleeve'),
+        content: Text(
+          'Delete sleeve "${sleeve.name}"? This is only allowed when all items in the sleeve are empty.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete sleeve'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
   Future<void> _integrityDialog(BuildContext context, RitualItem it) async {
     final status = it.integrityStatus;
-    final title = status == RitualRepo.integrityOk ? 'Integrity OK' : 'Integrity issue';
+    final title =
+        status == RitualRepo.integrityOk ? 'Integrity OK' : 'Integrity issue';
 
     final details = <String>[];
     details.add('Status: $status');
@@ -266,78 +357,185 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text('Voice Repeat'),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Integrity actions',
-            icon: const Icon(Icons.shield_outlined),
-            onSelected: _runIntegrityMenuAction,
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'check',
-                child: Text('Check only'),
+  Widget _sleeveBar(List<Sleeve> sleeves) {
+    final activeId = controller.activeSleeveId;
+    final activeSleeve = sleeves.firstWhere(
+      (s) => s.sleeveId == activeId,
+      orElse: () => sleeves.isNotEmpty
+          ? sleeves.first
+          : Sleeve(
+              sleeveId: SleeveDefaults.defaultId,
+              personId: widget.personId,
+              name: SleeveDefaults.defaultName,
+              sortOrder: 0,
+              createdAt: 0,
+              updatedAt: 0,
+            ),
+    );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 38,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: sleeves.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final sleeve = sleeves[i];
+                final selected = sleeve.sleeveId == activeId;
+                return ChoiceChip(
+                  label: Text(sleeve.name),
+                  selected: selected,
+                  onSelected: (_) => controller.setActiveSleeve(sleeve.sleeveId),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Current sleeve: ${activeSleeve.name}',
+                  style: const TextStyle(color: Colors.white70),
+                ),
               ),
-              PopupMenuItem(
-                value: 'repairRecorded',
-                child: Text('Check and repair active'),
+              IconButton(
+                tooltip: 'New sleeve',
+                onPressed: _createSleeveDialog,
+                icon: const Icon(Icons.add, color: Colors.white),
               ),
-              PopupMenuItem(
-                value: 'repairAll',
-                child: Text('Check and repair all'),
+              IconButton(
+                tooltip: 'Rename sleeve',
+                onPressed: activeSleeve.sleeveId == SleeveDefaults.defaultId
+                    ? null
+                    : () => _renameSleeveDialog(activeSleeve),
+                icon: const Icon(Icons.edit_outlined, color: Colors.white),
+              ),
+              IconButton(
+                tooltip: 'Delete sleeve',
+                onPressed: activeSleeve.sleeveId == SleeveDefaults.defaultId
+                    ? null
+                    : () async {
+                        final confirmed =
+                            await _confirmDeleteSleeveDialog(activeSleeve);
+                        if (!confirmed) return;
+                        await controller.deleteActiveSleeve();
+                      },
+                icon: const Icon(Icons.delete_outline, color: Colors.white),
               ),
             ],
           ),
         ],
-        bottom: TabBar(
-          controller: tabs,
-          tabs: const [
-            Tab(text: 'Active'),
-            Tab(text: 'Archive'),
-          ],
-        ),
       ),
-      body: AnimatedBuilder(
-        animation: controller,
-        builder: (_, __) {
-          final msg = controller.uiMessage;
-          if (msg != null && msg.id > _lastUiMessageId) {
-            _lastUiMessageId = msg.id;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(msg.text)),
-              );
-            });
-          }
+    );
+  }
 
-          return TabBarView(
-            controller: tabs,
-            children: [
-              StreamBuilder<List<RitualItem>>(
-                stream: repo.watchActive(widget.personId),
-                builder: (context, snap) {
-                  final items = snap.data ?? const [];
-                  return _gridActive(context, items);
-                },
-              ),
-              StreamBuilder<List<RitualItem>>(
-                stream: repo.watchArchived(widget.personId),
-                builder: (context, snap) {
-                  final items = snap.data ?? const [];
-                  return _listArchive(context, items);
-                },
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Sleeve>>(
+      stream: repo.watchSleeves(widget.personId),
+      builder: (context, sleeveSnap) {
+        final sleeves = sleeveSnap.data ?? const <Sleeve>[];
+
+        if (sleeves.isNotEmpty &&
+            !sleeves.any((s) => s.sleeveId == controller.activeSleeveId)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            controller.setActiveSleeve(sleeves.first.sleeveId);
+          });
+        }
+
+        return Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            title: const Text('Voice Repeat'),
+            actions: [
+              PopupMenuButton<String>(
+                tooltip: 'Integrity actions',
+                icon: const Icon(Icons.shield_outlined),
+                onSelected: _runIntegrityMenuAction,
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'check',
+                    child: Text('Check only'),
+                  ),
+                  PopupMenuItem(
+                    value: 'repairRecorded',
+                    child: Text('Check and repair active'),
+                  ),
+                  PopupMenuItem(
+                    value: 'repairAll',
+                    child: Text('Check and repair all'),
+                  ),
+                ],
               ),
             ],
-          );
-        },
-      ),
+            bottom: TabBar(
+              controller: tabs,
+              tabs: const [
+                Tab(text: 'Active'),
+                Tab(text: 'Archive'),
+              ],
+            ),
+          ),
+          body: AnimatedBuilder(
+            animation: controller,
+            builder: (_, __) {
+              final msg = controller.uiMessage;
+              if (msg != null && msg.id > _lastUiMessageId) {
+                _lastUiMessageId = msg.id;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(msg.text)),
+                  );
+                });
+              }
+
+              final currentSleeveId = controller.activeSleeveId;
+
+              return Column(
+                children: [
+                  _sleeveBar(sleeves),
+                  Expanded(
+                    child: TabBarView(
+                      controller: tabs,
+                      children: [
+                        StreamBuilder<List<RitualItem>>(
+                          stream: repo.watchActive(
+                            widget.personId,
+                            sleeveId: currentSleeveId,
+                          ),
+                          builder: (context, snap) {
+                            final items = snap.data ?? const [];
+                            return _gridActive(context, items);
+                          },
+                        ),
+                        StreamBuilder<List<RitualItem>>(
+                          stream: repo.watchArchived(
+                            widget.personId,
+                            sleeveId: currentSleeveId,
+                          ),
+                          builder: (context, snap) {
+                            final items = snap.data ?? const [];
+                            return _listArchive(context, items);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -346,7 +544,7 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
       children: [
         _integrityInfoBanner(
           items: items,
-          emptyText: 'Active items are currently in a healthy state.',
+          emptyText: 'Active items in this sleeve are currently in a healthy state.',
         ),
         Expanded(
           child: Padding(
@@ -363,6 +561,7 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                 final it = items[i];
                 return _ActiveTile(
                   item: it,
+                  displayIndex: i + 1,
                   isRecording: controller.recordingItemId == it.itemId,
                   isPlaying: controller.playingItemId == it.itemId,
                   onIntegrityTap: () => _integrityDialog(context, it),
@@ -408,7 +607,7 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
       children: [
         _integrityInfoBanner(
           items: items,
-          emptyText: 'Archived items are currently in a healthy state.',
+          emptyText: 'Archived items in this sleeve are currently in a healthy state.',
         ),
         Expanded(
           child: ListView.separated(
@@ -546,6 +745,7 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
 class _ActiveTile extends StatefulWidget {
   const _ActiveTile({
     required this.item,
+    required this.displayIndex,
     required this.isRecording,
     required this.isPlaying,
     required this.onIntegrityTap,
@@ -558,6 +758,7 @@ class _ActiveTile extends StatefulWidget {
   });
 
   final RitualItem item;
+  final int displayIndex;
   final bool isRecording;
   final bool isPlaying;
   final VoidCallback onIntegrityTap;
@@ -565,7 +766,7 @@ class _ActiveTile extends StatefulWidget {
   final Future<void> Function() onHoldEnd;
   final Future<void> Function() onTap;
   final VoidCallback onRename;
-  final VoidCallback onArchive;
+  final Future<void> Function() onArchive;
   final Future<void> Function() onDelete;
 
   @override
@@ -596,7 +797,7 @@ class _ActiveTileState extends State<_ActiveTile> {
   @override
   Widget build(BuildContext context) {
     final it = widget.item;
-    final isEmpty = it.state == 'empty';
+    final isEmpty = it.state == ItemState.empty;
 
     final border = widget.isRecording
         ? Colors.redAccent
@@ -606,7 +807,8 @@ class _ActiveTileState extends State<_ActiveTile> {
                 ? Colors.white24
                 : Colors.white;
 
-    final title = it.label.isEmpty ? 'Button ${it.slotIndex + 1}' : it.label;
+    final title =
+        it.label.isEmpty ? 'Button ${widget.displayIndex}' : it.label;
 
     final status = widget.isRecording
         ? 'Recording'
@@ -712,7 +914,7 @@ class _ActiveTileState extends State<_ActiveTile> {
                   ),
                   onSelected: (v) async {
                     if (v == 'rename') widget.onRename();
-                    if (v == 'archive') widget.onArchive();
+                    if (v == 'archive') await widget.onArchive();
                     if (v == 'delete') await widget.onDelete();
                   },
                   itemBuilder: (_) => [

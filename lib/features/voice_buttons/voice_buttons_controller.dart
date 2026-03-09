@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../domain/constants.dart';
 import '../../data/repositories/ritual_repo.dart';
 import '../../data/services/integrity_service.dart';
 import '../../infrastructure/audio_service.dart';
@@ -33,6 +34,8 @@ class VoiceButtonsController extends ChangeNotifier {
     storage: storage,
   );
 
+  String activeSleeveId = SleeveDefaults.defaultId;
+
   String? recordingItemId;
   String? playingItemId;
 
@@ -45,6 +48,51 @@ class VoiceButtonsController extends ChangeNotifier {
     _uiMessageSeq++;
     uiMessage = UiMessage(_uiMessageSeq, text);
     notifyListeners();
+  }
+
+  Future<void> setActiveSleeve(String sleeveId) async {
+    activeSleeveId = sleeveId;
+    notifyListeners();
+  }
+
+  Future<void> createSleeve(String name) async {
+    try {
+      final sleeveId = await repo.createSleeve(
+        personId: personId,
+        name: name,
+      );
+      activeSleeveId = sleeveId;
+      _emitUi('Sleeve created.');
+    } catch (e) {
+      _emitUi(e.toString().replaceFirst('Bad state: ', ''));
+    }
+  }
+
+  Future<void> renameActiveSleeve(String name) async {
+    try {
+      await repo.renameSleeve(
+        personId: personId,
+        sleeveId: activeSleeveId,
+        name: name,
+      );
+      _emitUi('Sleeve renamed.');
+    } catch (e) {
+      _emitUi(e.toString().replaceFirst('Bad state: ', ''));
+    }
+  }
+
+  Future<void> deleteActiveSleeve() async {
+    try {
+      await repo.deleteSleeve(
+        personId: personId,
+        sleeveId: activeSleeveId,
+      );
+      activeSleeveId = SleeveDefaults.defaultId;
+      _emitUi('Sleeve deleted.');
+      notifyListeners();
+    } catch (e) {
+      _emitUi(e.toString().replaceFirst('Bad state: ', ''));
+    }
   }
 
   String _summaryText(

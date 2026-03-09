@@ -20,6 +20,11 @@ class ReservedItemId {
   static const system = 'system';
 }
 
+class SleeveDefaults {
+  static const defaultId = 'default';
+  static const defaultName = 'Default';
+}
+
 class EnforcementMode {
   static const soft = 'soft';
   static const strict = 'strict';

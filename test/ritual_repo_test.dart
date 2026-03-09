@@ -5,17 +5,21 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voice_repeat/data/db/app_db.dart';
 import 'package:voice_repeat/data/repositories/ritual_repo.dart';
+import 'package:voice_repeat/domain/constants.dart';
 
 void main() {
   group('RitualRepo', () {
     late AppDb db;
     late RitualRepo repo;
     late String personId;
+    late String sleeveId;
 
     setUp(() async {
       db = AppDb(executor: NativeDatabase.memory());
       repo = RitualRepo(db);
       personId = await repo.ensureDefaultPerson();
+      await repo.ensureDefaultSleeve(personId);
+      sleeveId = SleeveDefaults.defaultId;
       await repo.ensureInitialSlots(personId, initial: 4);
     });
 
@@ -36,8 +40,21 @@ void main() {
       expect(persons.first.displayName, 'Family');
     });
 
+    test('ensureDefaultSleeve creates default sleeve once', () async {
+      await repo.ensureDefaultSleeve(personId);
+      await repo.ensureDefaultSleeve(personId);
+
+      final sleeves = await (db.select(db.sleeves)
+            ..where((t) => t.personId.equals(personId)))
+          .get();
+
+      expect(sleeves.length, 1);
+      expect(sleeves.first.sleeveId, SleeveDefaults.defaultId);
+      expect(sleeves.first.name, SleeveDefaults.defaultName);
+    });
+
     test('ensureInitialSlots creates exactly N slots with unique slotIndex', () async {
-      final items = await _itemsOfPerson(db, personId);
+      final items = await _itemsOfSleeve(db, personId, sleeveId);
       expect(items.length, 4);
 
       final slots = items.map((e) => e.slotIndex).toList()..sort();
@@ -47,17 +64,17 @@ void main() {
     });
 
     test('ensureAtLeastOneEmpty does nothing when an empty slot exists', () async {
-      final before = await _itemsOfPerson(db, personId);
+      final before = await _itemsOfSleeve(db, personId, sleeveId);
       expect(before.any((x) => x.state == RitualRepo.stateEmpty), true);
 
-      await repo.ensureAtLeastOneEmpty(personId);
+      await repo.ensureAtLeastOneEmpty(personId, sleeveId: sleeveId);
 
-      final after = await _itemsOfPerson(db, personId);
+      final after = await _itemsOfSleeve(db, personId, sleeveId);
       expect(after.length, before.length);
     });
 
     test('ensureAtLeastOneEmpty adds a new empty slot when none exist', () async {
-      final items = await _itemsOfPerson(db, personId);
+      final items = await _itemsOfSleeve(db, personId, sleeveId);
       for (final it in items) {
         await repo.setRecorded(
           personId: personId,
@@ -68,7 +85,7 @@ void main() {
         );
       }
 
-      final after = await _itemsOfPerson(db, personId);
+      final after = await _itemsOfSleeve(db, personId, sleeveId);
       expect(after.length, 5);
       expect(after.any((x) => x.state == RitualRepo.stateEmpty), true);
 
@@ -76,8 +93,81 @@ void main() {
       expect(maxSlot, 4);
     });
 
+    test('createSleeve creates sleeve and one empty slot', () async {
+      final newSleeveId = await repo.createSleeve(
+        personId: personId,
+        name: 'Morning',
+      );
+
+      final sleeves = await (db.select(db.sleeves)
+            ..where((t) => t.personId.equals(personId)))
+          .get();
+      expect(sleeves.length, 2);
+
+      final items = await _itemsOfSleeve(db, personId, newSleeveId);
+      expect(items.length, 1);
+      expect(items.single.state, RitualRepo.stateEmpty);
+    });
+
+    test('renameSleeve renames non default sleeve', () async {
+      final newSleeveId = await repo.createSleeve(
+        personId: personId,
+        name: 'Morning',
+      );
+
+      await repo.renameSleeve(
+        personId: personId,
+        sleeveId: newSleeveId,
+        name: 'Evening',
+      );
+
+      final sleeve = await (db.select(db.sleeves)
+            ..where((t) => t.sleeveId.equals(newSleeveId)))
+          .getSingle();
+      expect(sleeve.name, 'Evening');
+    });
+
+    test('default sleeve cannot be renamed', () async {
+      expect(
+        () => repo.renameSleeve(
+          personId: personId,
+          sleeveId: SleeveDefaults.defaultId,
+          name: 'Other',
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('deleteSleeve only works when all items are empty and not default', () async {
+      final newSleeveId = await repo.createSleeve(
+        personId: personId,
+        name: 'Morning',
+      );
+
+      await repo.deleteSleeve(
+        personId: personId,
+        sleeveId: newSleeveId,
+      );
+
+      final sleeves = await (db.select(db.sleeves)
+            ..where((t) => t.personId.equals(personId)))
+          .get();
+      expect(sleeves.length, 1);
+      expect(sleeves.single.sleeveId, SleeveDefaults.defaultId);
+    });
+
+    test('default sleeve cannot be deleted', () async {
+      expect(
+        () => repo.deleteSleeve(
+          personId: personId,
+          sleeveId: SleeveDefaults.defaultId,
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
     test('setRecorded: empty -> recorded, sets activePath and sizeBytes', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       await repo.setRecorded(
         personId: personId,
@@ -97,7 +187,7 @@ void main() {
     });
 
     test('setRecorded overwrites recorded -> recorded (allowed)', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       await repo.setRecorded(
         personId: personId,
@@ -124,10 +214,14 @@ void main() {
     });
 
     test('setArchived allowed only from recorded', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       expect(
-        () => repo.setArchived(personId: personId, itemId: it.itemId, archivedPath: '/tmp/x.m4a'),
+        () => repo.setArchived(
+          personId: personId,
+          itemId: it.itemId,
+          archivedPath: '/tmp/x.m4a',
+        ),
         throwsA(isA<StateError>()),
       );
 
@@ -153,10 +247,14 @@ void main() {
     });
 
     test('restore allowed only from archived', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       expect(
-        () => repo.restore(personId: personId, itemId: it.itemId, activePath: '/tmp/a.m4a'),
+        () => repo.restore(
+          personId: personId,
+          itemId: it.itemId,
+          activePath: '/tmp/a.m4a',
+        ),
         throwsA(isA<StateError>()),
       );
 
@@ -167,8 +265,13 @@ void main() {
         activePath: '/tmp/a.m4a',
         sizeBytes: 1,
       );
+
       expect(
-        () => repo.restore(personId: personId, itemId: it.itemId, activePath: '/tmp/a2.m4a'),
+        () => repo.restore(
+          personId: personId,
+          itemId: it.itemId,
+          activePath: '/tmp/a2.m4a',
+        ),
         throwsA(isA<StateError>()),
       );
 
@@ -192,7 +295,7 @@ void main() {
     });
 
     test('clearToEmpty resets fields for recorded', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       await repo.setRecorded(
         personId: personId,
@@ -203,7 +306,6 @@ void main() {
       );
 
       await repo.markPlayed(personId: personId, itemId: it.itemId);
-
       await repo.clearToEmpty(personId: personId, itemId: it.itemId);
 
       final updated = await _byId(db, it.itemId);
@@ -219,7 +321,7 @@ void main() {
     });
 
     test('clearToEmpty resets fields for archived', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       await repo.setRecorded(
         personId: personId,
@@ -245,7 +347,7 @@ void main() {
     });
 
     test('rename works for empty, recorded, archived', () async {
-      final it0 = await _slot(db, personId, 0);
+      final it0 = await _slot(db, personId, sleeveId, 0);
 
       await repo.rename(personId: personId, itemId: it0.itemId, label: 'A');
       expect((await _byId(db, it0.itemId)).label, 'A');
@@ -270,7 +372,7 @@ void main() {
     });
 
     test('markPlayed increments usageCountTotal and sets lastUsedAt (recorded)', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       await repo.setRecorded(
         personId: personId,
@@ -292,7 +394,7 @@ void main() {
     });
 
     test('markPlayed allowed on archived too', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       await repo.setRecorded(
         personId: personId,
@@ -315,11 +417,11 @@ void main() {
     });
 
     test('auto slot is not created when an empty already exists', () async {
-      final before = await _itemsOfPerson(db, personId);
+      final before = await _itemsOfSleeve(db, personId, sleeveId);
       final lenBefore = before.length;
       expect(before.any((x) => x.state == RitualRepo.stateEmpty), true);
 
-      final it0 = await _slot(db, personId, 0);
+      final it0 = await _slot(db, personId, sleeveId, 0);
       await repo.setRecorded(
         personId: personId,
         itemId: it0.itemId,
@@ -328,13 +430,13 @@ void main() {
         sizeBytes: 1,
       );
 
-      final after = await _itemsOfPerson(db, personId);
+      final after = await _itemsOfSleeve(db, personId, sleeveId);
       expect(after.length, lenBefore);
       expect(after.any((x) => x.state == RitualRepo.stateEmpty), true);
     });
 
     test('auto slot created exactly once when last empty is consumed', () async {
-      final items = await _itemsOfPerson(db, personId);
+      final items = await _itemsOfSleeve(db, personId, sleeveId);
 
       for (final it in items) {
         await repo.setRecorded(
@@ -346,7 +448,7 @@ void main() {
         );
       }
 
-      final after = await _itemsOfPerson(db, personId);
+      final after = await _itemsOfSleeve(db, personId, sleeveId);
       expect(after.length, 5);
 
       final empty = after.firstWhere((x) => x.state == RitualRepo.stateEmpty);
@@ -358,13 +460,13 @@ void main() {
         sizeBytes: 1,
       );
 
-      final after2 = await _itemsOfPerson(db, personId);
+      final after2 = await _itemsOfSleeve(db, personId, sleeveId);
       expect(after2.length, 6);
       expect(after2.any((x) => x.state == RitualRepo.stateEmpty), true);
     });
 
     test('setRecorded logs a recorded event with correct personId and itemId', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       await repo.setRecorded(
         personId: personId,
@@ -380,16 +482,19 @@ void main() {
       final last = events.last;
       expect(last.personId, personId);
       expect(last.itemId, it.itemId);
-      expect(last.eventType, RitualEventType.recorded.name);
+      expect(last.eventType, RitualEventType.recorded.eventName);
+      expect(last.sleeveId, sleeveId);
     });
 
     test('rename logs a renamed event with metadata label', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       await repo.rename(personId: personId, itemId: it.itemId, label: 'Hello');
 
       final events = await _eventsForItem(db, it.itemId);
-      final renamed = events.where((e) => e.eventType == RitualEventType.renamed.name).toList();
+      final renamed = events
+          .where((e) => e.eventType == RitualEventType.renamed.eventName)
+          .toList();
       expect(renamed.length, 1);
 
       final meta = renamed.single.metadata;
@@ -400,7 +505,7 @@ void main() {
     });
 
     test('archive + restore log both events in order', () async {
-      final it = await _slot(db, personId, 0);
+      final it = await _slot(db, personId, sleeveId, 0);
 
       await repo.setRecorded(
         personId: personId,
@@ -423,8 +528,8 @@ void main() {
       final events = await _eventsForItem(db, it.itemId);
       final types = events.map((e) => e.eventType).toList();
 
-      final idxArchived = types.indexOf(RitualEventType.archived.name);
-      final idxRestored = types.indexOf(RitualEventType.restored.name);
+      final idxArchived = types.indexOf(RitualEventType.archived.eventName);
+      final idxRestored = types.indexOf(RitualEventType.restored.eventName);
 
       expect(idxArchived, greaterThan(-1));
       expect(idxRestored, greaterThan(-1));
@@ -433,21 +538,35 @@ void main() {
   });
 }
 
-Future<List<RitualItem>> _itemsOfPerson(AppDb db, String personId) {
+Future<List<RitualItem>> _itemsOfSleeve(
+  AppDb db,
+  String personId,
+  String sleeveId,
+) {
   return (db.select(db.ritualItems)
-        ..where((t) => t.personId.equals(personId))
+        ..where((t) =>
+            t.personId.equals(personId) & t.sleeveId.equals(sleeveId))
         ..orderBy([(t) => drift.OrderingTerm(expression: t.slotIndex)]))
       .get();
 }
 
-Future<RitualItem> _slot(AppDb db, String personId, int slotIndex) {
+Future<RitualItem> _slot(
+  AppDb db,
+  String personId,
+  String sleeveId,
+  int slotIndex,
+) {
   return (db.select(db.ritualItems)
-        ..where((t) => t.personId.equals(personId) & t.slotIndex.equals(slotIndex)))
+        ..where((t) =>
+            t.personId.equals(personId) &
+            t.sleeveId.equals(sleeveId) &
+            t.slotIndex.equals(slotIndex)))
       .getSingle();
 }
 
 Future<RitualItem> _byId(AppDb db, String itemId) {
-  return (db.select(db.ritualItems)..where((t) => t.itemId.equals(itemId))).getSingle();
+  return (db.select(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+      .getSingle();
 }
 
 Future<List<RitualEvent>> _eventsForItem(AppDb db, String itemId) {

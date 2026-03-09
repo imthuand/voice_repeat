@@ -5,6 +5,8 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../domain/constants.dart';
+
 part 'app_db.g.dart';
 
 class Persons extends Table {
@@ -19,6 +21,24 @@ class Persons extends Table {
   Set<Column> get primaryKey => {personId};
 }
 
+@TableIndex(name: 'idx_sleeves_person_sort', columns: {#personId, #sortOrder})
+class Sleeves extends Table {
+  TextColumn get sleeveId => text()();
+  TextColumn get personId => text()();
+  TextColumn get name => text()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {sleeveId};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+        {personId, name},
+      ];
+}
+
 @TableIndex(name: 'idx_ritual_items_person_state', columns: {#personId, #state})
 @TableIndex(name: 'idx_ritual_items_person_archived_at', columns: {#personId, #archivedAt})
 @TableIndex(name: 'idx_ritual_items_person_sleeve_state', columns: {#personId, #sleeveId, #state})
@@ -30,10 +50,8 @@ class RitualItems extends Table {
 
   TextColumn get label => text().withDefault(const Constant(''))();
 
-  // empty, recorded, archived
-  TextColumn get state => text().withDefault(const Constant('empty'))();
+  TextColumn get state => text().withDefault(const Constant(ItemState.empty))();
 
-  // Denormalized paths
   TextColumn get activePath => text().nullable()();
   TextColumn get archivedPath => text().nullable()();
   IntColumn get sizeBytes => integer().withDefault(const Constant(0))();
@@ -41,14 +59,14 @@ class RitualItems extends Table {
   IntColumn get usageCountTotal => integer().withDefault(const Constant(0))();
   IntColumn get lastUsedAt => integer().nullable()();
 
-  // Phase 1 hardening, sleeve and indexing ready
-  TextColumn get sleeveId => text().withDefault(const Constant('default'))();
+  TextColumn get sleeveId =>
+      text().withDefault(const Constant(SleeveDefaults.defaultId))();
   TextColumn get searchText => text().withDefault(const Constant(''))();
   IntColumn get recordedAt => integer().nullable()();
   IntColumn get archivedAt => integer().nullable()();
 
-  // v1.1 hardening: integrity layer
-  TextColumn get integrityStatus => text().withDefault(const Constant('ok'))();
+  TextColumn get integrityStatus =>
+      text().withDefault(const Constant(IntegrityStatus.ok))();
   IntColumn get integrityCheckedAt => integer().nullable()();
 
   IntColumn get createdAt => integer()();
@@ -74,25 +92,26 @@ class RitualEvents extends Table {
   IntColumn get timestamp => integer()();
   TextColumn get metadata => text().nullable()();
 
-  // Phase 1 enrichment foundation
-  TextColumn get sleeveId => text().withDefault(const Constant('default'))();
+  TextColumn get sleeveId =>
+      text().withDefault(const Constant(SleeveDefaults.defaultId))();
   IntColumn get slotIndex => integer().nullable()();
   TextColumn get itemState => text().withDefault(const Constant(''))();
   TextColumn get path => text().withDefault(const Constant(''))();
   IntColumn get sizeBytes => integer().withDefault(const Constant(0))();
-  TextColumn get source => text().withDefault(const Constant('repo'))();
-  TextColumn get enforcementMode => text().withDefault(const Constant('soft'))();
+  TextColumn get source => text().withDefault(const Constant(EventSource.repo))();
+  TextColumn get enforcementMode =>
+      text().withDefault(const Constant(EnforcementMode.soft))();
 
   @override
   Set<Column> get primaryKey => {eventId};
 }
 
-@DriftDatabase(tables: [Persons, RitualItems, RitualEvents])
+@DriftDatabase(tables: [Persons, Sleeves, RitualItems, RitualEvents])
 class AppDb extends _$AppDb {
   AppDb({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -101,13 +120,11 @@ class AppDb extends _$AppDb {
         },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
-            // Add RitualItems columns
             await m.addColumn(ritualItems, ritualItems.sleeveId);
             await m.addColumn(ritualItems, ritualItems.searchText);
             await m.addColumn(ritualItems, ritualItems.recordedAt);
             await m.addColumn(ritualItems, ritualItems.archivedAt);
 
-            // Add RitualEvents columns
             await m.addColumn(ritualEvents, ritualEvents.sleeveId);
             await m.addColumn(ritualEvents, ritualEvents.slotIndex);
             await m.addColumn(ritualEvents, ritualEvents.itemState);
@@ -116,7 +133,6 @@ class AppDb extends _$AppDb {
             await m.addColumn(ritualEvents, ritualEvents.source);
             await m.addColumn(ritualEvents, ritualEvents.enforcementMode);
 
-            // Create indexes for existing installs
             await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_ritual_items_person_state ON ritual_items(person_id, state)',
             );
@@ -137,7 +153,6 @@ class AppDb extends _$AppDb {
               'CREATE INDEX IF NOT EXISTS idx_ritual_events_person_sleeve_time ON ritual_events(person_id, sleeve_id, timestamp)',
             );
 
-            // Backfill
             await customStatement(
               "UPDATE ritual_items SET search_text = COALESCE(label, '') WHERE search_text = ''",
             );
@@ -153,9 +168,28 @@ class AppDb extends _$AppDb {
             await m.addColumn(ritualItems, ritualItems.integrityStatus);
             await m.addColumn(ritualItems, ritualItems.integrityCheckedAt);
 
-            // Backfill for existing rows
             await customStatement(
               "UPDATE ritual_items SET integrity_status = 'ok' WHERE integrity_status IS NULL",
+            );
+          }
+
+          if (from < 4) {
+            await m.createTable(sleeves);
+
+            await customStatement(
+              '''
+              INSERT OR IGNORE INTO sleeves (sleeve_id, person_id, name, sort_order, created_at, updated_at)
+              SELECT '${SleeveDefaults.defaultId}', person_id, '${SleeveDefaults.defaultName}', 0, updated_at, updated_at
+              FROM persons
+              ''',
+            );
+
+            await customStatement(
+              '''
+              UPDATE ritual_items
+              SET sleeve_id = '${SleeveDefaults.defaultId}'
+              WHERE sleeve_id IS NULL OR sleeve_id = ''
+              ''',
             );
           }
         },
@@ -172,7 +206,6 @@ LazyDatabase _openConnection() {
 
     final target = File(p.join(baseDir.path, 'voice_repeat.sqlite'));
 
-    // Best effort migrate from documents if present and support DB not created yet
     try {
       if (!await target.exists()) {
         final docs = await getApplicationDocumentsDirectory();
