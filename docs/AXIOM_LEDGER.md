@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: 81047d8
+- Current reference commit: 5f2524e
 
 ## Core Invariants
 - Never zero empty slots
@@ -120,12 +120,13 @@
 - Strict enforcement mode prepared in repo and integrity events
 - Recovery and repair domain paths for missing recorded and archived items
 - Recovery actions exposed in integrity dialog
+- Global integrity actions for check only, repair active, and repair all
 
-### Commit 4C purpose
-- Make integrity actions available from a single app level menu
-- Allow one click check only, repair active, or repair all
-- Keep delete clearly separate from repair
-- Improve speed of field recovery without changing domain rules
+### Commit 5 purpose
+- Clarify destructive delete versus repair in UI
+- Improve integrity run summaries
+- Surface unresolved issues directly in the screen
+- Final UX hardening before sleeves
 
 ## Enforcement Model
 ### Soft
@@ -149,13 +150,17 @@
 - Repair restores integrity status to ok
 - Repair preserves the invariant that there is always at least one empty slot
 
+## UX Rules
+- Delete is always destructive and must be confirmed
+- Repair is preferred over delete when the issue is a missing reference
+- Global integrity actions must report checked, issues, fixed, and remaining
+
 ## Next Planned Work
-### Next commit
-- Distinguish delete and repair even more clearly in UI
-- Optional confirmation for destructive delete
-- Better repair result summaries
+### Next major step
+- Sleeve domain model
+- Sleeve aware queries and navigation
+- Default sleeve remains stable
 
 ### Later
-- Sleeves
 - Scheduling and alarms
 - richer reconciliation and repair workflows

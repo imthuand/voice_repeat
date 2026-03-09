@@ -89,20 +89,44 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     );
   }
 
+  Future<bool> _confirmDeleteDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete slot permanently'),
+        content: const Text(
+          'This removes the slot and its button completely. This action is destructive.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete permanently'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
   Future<void> _integrityDialog(BuildContext context, RitualItem it) async {
     final status = it.integrityStatus;
-    final title = status == RitualRepo.integrityOk ? 'OK' : 'Integrity issue';
+    final title = status == RitualRepo.integrityOk ? 'Integrity OK' : 'Integrity issue';
 
     final details = <String>[];
     details.add('Status: $status');
     details.add('State: ${it.state}');
 
     if (it.activePath != null && it.activePath!.isNotEmpty) {
-      details.add('Active: ${it.activePath}');
+      details.add('Active file: ${it.activePath}');
     }
 
     if (it.archivedPath != null && it.archivedPath!.isNotEmpty) {
-      details.add('Archive: ${it.archivedPath}');
+      details.add('Archived file: ${it.archivedPath}');
     }
 
     if (it.integrityCheckedAt != null) {
@@ -135,12 +159,12 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
           if (canRepairRecorded)
             TextButton(
               onPressed: () => Navigator.pop(context, 'repairRecorded'),
-              child: const Text('Repair active to empty'),
+              child: const Text('Repair active item to empty'),
             ),
           if (canRepairArchived)
             TextButton(
               onPressed: () => Navigator.pop(context, 'repairArchived'),
-              child: const Text('Repair archive to empty'),
+              child: const Text('Repair archived item to empty'),
             ),
           if (status != RitualRepo.integrityOk)
             TextButton(
@@ -167,6 +191,9 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     }
 
     if (action == 'delete') {
+      final confirmed = await _confirmDeleteDialog();
+      if (!confirmed) return;
+
       if (it.state == RitualRepo.stateArchived) {
         await controller.deleteArchived(
           it.itemId,
@@ -196,6 +223,47 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
       await controller.runIntegrityCheckRepairAll();
       return;
     }
+  }
+
+  Widget _integrityInfoBanner({
+    required List<RitualItem> items,
+    required String emptyText,
+  }) {
+    final issueCount = items
+        .where((e) => e.integrityStatus != RitualRepo.integrityOk)
+        .length;
+
+    if (issueCount == 0) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Text(
+          emptyText,
+          style: const TextStyle(color: Colors.white70),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Text(
+        '$issueCount integrity issue${issueCount == 1 ? '' : 's'} detected. Prefer repair over delete where possible.',
+        style: const TextStyle(color: Colors.white),
+      ),
+    );
   }
 
   @override
@@ -274,119 +342,34 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
   }
 
   Widget _gridActive(BuildContext context, List<RitualItem> items) {
-    return Padding(
-      padding: const EdgeInsets.all(14),
-      child: GridView.builder(
-        itemCount: items.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 14,
-          mainAxisSpacing: 14,
-          childAspectRatio: 1.55,
+    return Column(
+      children: [
+        _integrityInfoBanner(
+          items: items,
+          emptyText: 'Active items are currently in a healthy state.',
         ),
-        itemBuilder: (_, i) {
-          final it = items[i];
-          return _ActiveTile(
-            item: it,
-            isRecording: controller.recordingItemId == it.itemId,
-            isPlaying: controller.playingItemId == it.itemId,
-            onIntegrityTap: () => _integrityDialog(context, it),
-            onHoldStart: () => controller.startHold(it.itemId),
-            onHoldEnd: () => controller.stopHold(it.itemId),
-            onTap: () async {
-              final path = it.activePath;
-              if (path == null) return;
-
-              final didPlay = await controller.togglePlay(it.itemId, path);
-              if (didPlay) {
-                await repo.markPlayed(
-                  personId: widget.personId,
-                  itemId: it.itemId,
-                );
-              }
-            },
-            onRename: () => _renameDialog(context, it.itemId, it.label),
-            onArchive: () async {
-              final path = it.activePath;
-              if (path == null) return;
-              await controller.archive(it.itemId, path);
-            },
-            onDelete: () => controller.deleteActive(
-              it.itemId,
-              activePath: it.activePath,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _listArchive(BuildContext context, List<RitualItem> items) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(14),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, i) {
-        final it = items[i];
-        return Dismissible(
-          key: ValueKey('arch_${it.itemId}'),
-          background: _swipeBg(
-            'RESTORE',
-            Icons.unarchive_outlined,
-            left: true,
-          ),
-          secondaryBackground: _swipeBg(
-            'DELETE',
-            Icons.delete_outline,
-            left: false,
-          ),
-          confirmDismiss: (dir) async {
-            if (dir == DismissDirection.startToEnd) {
-              final ap = it.archivedPath;
-              if (ap != null) {
-                await controller.restore(it.itemId, ap);
-              }
-              return false;
-            } else {
-              await controller.deleteArchived(
-                it.itemId,
-                archivedPath: it.archivedPath,
-              );
-              return false;
-            }
-          },
-          child: ListTile(
-            tileColor: Colors.white10,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Text(
-              it.label.isEmpty ? 'Archived item' : it.label,
-              style: const TextStyle(color: Colors.white),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              'Used ${it.usageCountTotal} times',
-              style: const TextStyle(color: Colors.white70),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (it.integrityStatus != RitualRepo.integrityOk)
-                  IconButton(
-                    tooltip: 'Integrity',
-                    onPressed: () => _integrityDialog(context, it),
-                    icon: const Icon(
-                      Icons.error_outline,
-                      color: Colors.white70,
-                    ),
-                  ),
-                IconButton(
-                  onPressed: () async {
-                    final path = it.archivedPath;
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: GridView.builder(
+              itemCount: items.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: 1.55,
+              ),
+              itemBuilder: (_, i) {
+                final it = items[i];
+                return _ActiveTile(
+                  item: it,
+                  isRecording: controller.recordingItemId == it.itemId,
+                  isPlaying: controller.playingItemId == it.itemId,
+                  onIntegrityTap: () => _integrityDialog(context, it),
+                  onHoldStart: () => controller.startHold(it.itemId),
+                  onHoldEnd: () => controller.stopHold(it.itemId),
+                  onTap: () async {
+                    final path = it.activePath;
                     if (path == null) return;
 
                     final didPlay = await controller.togglePlay(it.itemId, path);
@@ -397,16 +380,128 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                       );
                     }
                   },
-                  icon: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+                  onRename: () => _renameDialog(context, it.itemId, it.label),
+                  onArchive: () async {
+                    final path = it.activePath;
+                    if (path == null) return;
+                    await controller.archive(it.itemId, path);
+                  },
+                  onDelete: () async {
+                    final confirmed = await _confirmDeleteDialog();
+                    if (!confirmed) return;
+                    await controller.deleteActive(
+                      it.itemId,
+                      activePath: it.activePath,
+                    );
+                  },
+                );
+              },
             ),
           ),
-        );
-      },
+        ),
+      ],
+    );
+  }
+
+  Widget _listArchive(BuildContext context, List<RitualItem> items) {
+    return Column(
+      children: [
+        _integrityInfoBanner(
+          items: items,
+          emptyText: 'Archived items are currently in a healthy state.',
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.all(14),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) {
+              final it = items[i];
+              return Dismissible(
+                key: ValueKey('arch_${it.itemId}'),
+                background: _swipeBg(
+                  'RESTORE',
+                  Icons.unarchive_outlined,
+                  left: true,
+                ),
+                secondaryBackground: _swipeBg(
+                  'DELETE',
+                  Icons.delete_outline,
+                  left: false,
+                ),
+                confirmDismiss: (dir) async {
+                  if (dir == DismissDirection.startToEnd) {
+                    final ap = it.archivedPath;
+                    if (ap != null) {
+                      await controller.restore(it.itemId, ap);
+                    }
+                    return false;
+                  } else {
+                    final confirmed = await _confirmDeleteDialog();
+                    if (!confirmed) return false;
+                    await controller.deleteArchived(
+                      it.itemId,
+                      archivedPath: it.archivedPath,
+                    );
+                    return false;
+                  }
+                },
+                child: ListTile(
+                  tileColor: Colors.white10,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: Text(
+                    it.label.isEmpty ? 'Archived item' : it.label,
+                    style: const TextStyle(color: Colors.white),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    'Used ${it.usageCountTotal} times',
+                    style: const TextStyle(color: Colors.white70),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (it.integrityStatus != RitualRepo.integrityOk)
+                        IconButton(
+                          tooltip: 'Integrity',
+                          onPressed: () => _integrityDialog(context, it),
+                          icon: const Icon(
+                            Icons.error_outline,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      IconButton(
+                        onPressed: () async {
+                          final path = it.archivedPath;
+                          if (path == null) return;
+
+                          final didPlay =
+                              await controller.togglePlay(it.itemId, path);
+                          if (didPlay) {
+                            await repo.markPlayed(
+                              personId: widget.personId,
+                              itemId: it.itemId,
+                            );
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.play_arrow,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -471,7 +566,7 @@ class _ActiveTile extends StatefulWidget {
   final Future<void> Function() onTap;
   final VoidCallback onRename;
   final VoidCallback onArchive;
-  final VoidCallback onDelete;
+  final Future<void> Function() onDelete;
 
   @override
   State<_ActiveTile> createState() => _ActiveTileState();
@@ -615,10 +710,10 @@ class _ActiveTileState extends State<_ActiveTile> {
                     color: Colors.white70,
                     size: 20,
                   ),
-                  onSelected: (v) {
+                  onSelected: (v) async {
                     if (v == 'rename') widget.onRename();
                     if (v == 'archive') widget.onArchive();
-                    if (v == 'delete') widget.onDelete();
+                    if (v == 'delete') await widget.onDelete();
                   },
                   itemBuilder: (_) => [
                     const PopupMenuItem(
@@ -632,7 +727,7 @@ class _ActiveTileState extends State<_ActiveTile> {
                     ),
                     const PopupMenuItem(
                       value: 'delete',
-                      child: Text('Delete'),
+                      child: Text('Delete permanently'),
                     ),
                   ],
                 ),

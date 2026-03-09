@@ -47,6 +47,14 @@ class VoiceButtonsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  String _summaryText(
+    String prefix,
+    IntegritySummary summary,
+  ) {
+    final remaining = summary.issues - summary.fixed;
+    return '$prefix Checked ${summary.checked}. Issues ${summary.issues}. Fixed ${summary.fixed}. Remaining ${remaining < 0 ? 0 : remaining}.';
+  }
+
   Future<void> _stopPlayingIfAny() async {
     if (playingItemId == null) return;
 
@@ -205,7 +213,7 @@ class VoiceButtonsController extends ChangeNotifier {
     }
 
     await repo.deleteSlot(personId: personId, itemId: itemId);
-    _emitUi('Slot deleted.');
+    _emitUi('Slot deleted permanently.');
   }
 
   Future<void> deleteArchived(String itemId, {String? archivedPath}) async {
@@ -216,7 +224,7 @@ class VoiceButtonsController extends ChangeNotifier {
     }
 
     await repo.deleteSlot(personId: personId, itemId: itemId);
-    _emitUi('Slot deleted.');
+    _emitUi('Slot deleted permanently.');
   }
 
   Future<void> clearSlotKeepButton(String itemId) async {
@@ -245,9 +253,7 @@ class VoiceButtonsController extends ChangeNotifier {
 
   Future<IntegritySummary> runIntegrityCheck() async {
     final summary = await integrity.checkPerson(personId: personId);
-    _emitUi(
-      'Integrity check done. Checked ${summary.checked}. Issues ${summary.issues}. Fixed ${summary.fixed}.',
-    );
+    _emitUi(_summaryText('Integrity check done.', summary));
     return summary;
   }
 
@@ -256,9 +262,7 @@ class VoiceButtonsController extends ChangeNotifier {
       personId: personId,
       repairMissingRecordedToEmpty: true,
     );
-    _emitUi(
-      'Integrity repair done. Checked ${summary.checked}. Issues ${summary.issues}. Fixed ${summary.fixed}.',
-    );
+    _emitUi(_summaryText('Integrity repair for active items done.', summary));
     return summary;
   }
 
@@ -268,9 +272,7 @@ class VoiceButtonsController extends ChangeNotifier {
       repairMissingRecordedToEmpty: true,
       repairMissingArchivedToEmpty: true,
     );
-    _emitUi(
-      'Integrity repair all done. Checked ${summary.checked}. Issues ${summary.issues}. Fixed ${summary.fixed}.',
-    );
+    _emitUi(_summaryText('Integrity repair for all items done.', summary));
     return summary;
   }
 
