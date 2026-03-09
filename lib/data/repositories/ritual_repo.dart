@@ -106,6 +106,7 @@ class RitualRepo {
             displayName: 'Family',
             role: 'family',
             language: const Value('de'),
+            lastActiveSleeveId: const Value(SleeveDefaults.defaultId),
             createdAt: now,
             updatedAt: now,
           ),
@@ -117,23 +118,70 @@ class RitualRepo {
 
   Future<void> ensureDefaultSleeve(String personId) async {
     final existing = await (db.select(db.sleeves)
-          ..where((t) => t.sleeveId.equals(SleeveDefaults.defaultId)))
+          ..where((t) =>
+              t.personId.equals(personId) &
+              t.sleeveId.equals(SleeveDefaults.defaultId)))
         .getSingleOrNull();
 
-    if (existing != null) return;
+    if (existing == null) {
+      final now = _now();
+      await db.into(db.sleeves).insert(
+            SleevesCompanion.insert(
+              sleeveId: SleeveDefaults.defaultId,
+              personId: personId,
+              name: SleeveDefaults.defaultName,
+              sortOrder: const Value(0),
+              createdAt: now,
+              updatedAt: now,
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+    }
 
-    final now = _now();
-    await db.into(db.sleeves).insert(
-          SleevesCompanion.insert(
-            sleeveId: SleeveDefaults.defaultId,
-            personId: personId,
-            name: SleeveDefaults.defaultName,
-            sortOrder: const Value(0),
-            createdAt: now,
-            updatedAt: now,
-          ),
-          mode: InsertMode.insertOrIgnore,
-        );
+    final person = await (db.select(db.persons)
+          ..where((t) => t.personId.equals(personId)))
+        .getSingleOrNull();
+    if (person != null &&
+        (person.lastActiveSleeveId == null ||
+            person.lastActiveSleeveId!.isEmpty)) {
+      await setLastActiveSleeveId(
+        personId: personId,
+        sleeveId: SleeveDefaults.defaultId,
+      );
+    }
+  }
+
+  Future<String> getLastActiveSleeveId({
+    required String personId,
+  }) async {
+    final person = await (db.select(db.persons)
+          ..where((t) => t.personId.equals(personId)))
+        .getSingleOrNull();
+
+    final sleeveId = person?.lastActiveSleeveId;
+    if (sleeveId == null || sleeveId.isEmpty) {
+      return SleeveDefaults.defaultId;
+    }
+
+    final sleeve = await (db.select(db.sleeves)
+          ..where((t) =>
+              t.personId.equals(personId) & t.sleeveId.equals(sleeveId)))
+        .getSingleOrNull();
+
+    return sleeve == null ? SleeveDefaults.defaultId : sleeveId;
+  }
+
+  Future<void> setLastActiveSleeveId({
+    required String personId,
+    required String sleeveId,
+  }) async {
+    await (db.update(db.persons)..where((t) => t.personId.equals(personId)))
+        .write(
+      PersonsCompanion(
+        lastActiveSleeveId: Value(sleeveId),
+        updatedAt: Value(_now()),
+      ),
+    );
   }
 
   Future<void> ensureInitialSlots(String personId, {int initial = 4}) async {
@@ -145,7 +193,9 @@ class RitualRepo {
       for (var slot = 0; slot < initial; slot++) {
         final exists = await (db.select(db.ritualItems)
               ..where((t) =>
-                  t.personId.equals(personId) & t.slotIndex.equals(slot)))
+                  t.personId.equals(personId) &
+                  t.slotIndex.equals(slot) &
+                  t.sleeveId.equals(SleeveDefaults.defaultId)))
             .getSingleOrNull();
 
         if (exists != null) continue;
@@ -324,6 +374,17 @@ class RitualRepo {
 
       await (db.delete(db.sleeves)..where((t) => t.sleeveId.equals(sleeveId)))
           .go();
+
+      final person = await (db.select(db.persons)
+            ..where((t) => t.personId.equals(personId)))
+          .getSingleOrNull();
+
+      if (person?.lastActiveSleeveId == sleeveId) {
+        await setLastActiveSleeveId(
+          personId: personId,
+          sleeveId: SleeveDefaults.defaultId,
+        );
+      }
     });
   }
 
@@ -350,8 +411,14 @@ class RitualRepo {
               t.sleeveId.equals(sleeveId) &
               t.state.equals(stateArchived))
           ..orderBy([
-            (t) => OrderingTerm(expression: t.archivedAt, mode: OrderingMode.desc),
-            (t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc),
+            (t) => OrderingTerm(
+                  expression: t.archivedAt,
+                  mode: OrderingMode.desc,
+                ),
+            (t) => OrderingTerm(
+                  expression: t.updatedAt,
+                  mode: OrderingMode.desc,
+                ),
           ]))
         .watch();
   }
@@ -392,7 +459,9 @@ class RitualRepo {
             personId: Value(personId),
             eventType: Value(type.eventName),
             timestamp: Value(now),
-            metadata: metadata == null ? const Value(null) : Value(jsonEncode(metadata)),
+            metadata: metadata == null
+                ? const Value(null)
+                : Value(jsonEncode(metadata)),
             sleeveId: Value(sleeve),
             slotIndex: Value(slotValue),
             itemState: Value(stateValue),

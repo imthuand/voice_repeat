@@ -14,6 +14,7 @@ class Persons extends Table {
   TextColumn get displayName => text()();
   TextColumn get role => text()();
   TextColumn get language => text().withDefault(const Constant('de'))();
+  TextColumn get lastActiveSleeveId => text().nullable()();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
 
@@ -40,8 +41,14 @@ class Sleeves extends Table {
 }
 
 @TableIndex(name: 'idx_ritual_items_person_state', columns: {#personId, #state})
-@TableIndex(name: 'idx_ritual_items_person_archived_at', columns: {#personId, #archivedAt})
-@TableIndex(name: 'idx_ritual_items_person_sleeve_state', columns: {#personId, #sleeveId, #state})
+@TableIndex(
+  name: 'idx_ritual_items_person_archived_at',
+  columns: {#personId, #archivedAt},
+)
+@TableIndex(
+  name: 'idx_ritual_items_person_sleeve_state',
+  columns: {#personId, #sleeveId, #state},
+)
 class RitualItems extends Table {
   TextColumn get itemId => text()();
 
@@ -50,7 +57,8 @@ class RitualItems extends Table {
 
   TextColumn get label => text().withDefault(const Constant(''))();
 
-  TextColumn get state => text().withDefault(const Constant(ItemState.empty))();
+  TextColumn get state =>
+      text().withDefault(const Constant(ItemState.empty))();
 
   TextColumn get activePath => text().nullable()();
   TextColumn get archivedPath => text().nullable()();
@@ -81,9 +89,15 @@ class RitualItems extends Table {
       ];
 }
 
-@TableIndex(name: 'idx_ritual_events_person_time', columns: {#personId, #timestamp})
+@TableIndex(
+  name: 'idx_ritual_events_person_time',
+  columns: {#personId, #timestamp},
+)
 @TableIndex(name: 'idx_ritual_events_item_time', columns: {#itemId, #timestamp})
-@TableIndex(name: 'idx_ritual_events_person_sleeve_time', columns: {#personId, #sleeveId, #timestamp})
+@TableIndex(
+  name: 'idx_ritual_events_person_sleeve_time',
+  columns: {#personId, #sleeveId, #timestamp},
+)
 class RitualEvents extends Table {
   TextColumn get eventId => text()();
   TextColumn get itemId => text()();
@@ -98,7 +112,8 @@ class RitualEvents extends Table {
   TextColumn get itemState => text().withDefault(const Constant(''))();
   TextColumn get path => text().withDefault(const Constant(''))();
   IntColumn get sizeBytes => integer().withDefault(const Constant(0))();
-  TextColumn get source => text().withDefault(const Constant(EventSource.repo))();
+  TextColumn get source =>
+      text().withDefault(const Constant(EventSource.repo))();
   TextColumn get enforcementMode =>
       text().withDefault(const Constant(EnforcementMode.soft))();
 
@@ -111,7 +126,7 @@ class AppDb extends _$AppDb {
   AppDb({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -189,6 +204,18 @@ class AppDb extends _$AppDb {
               UPDATE ritual_items
               SET sleeve_id = '${SleeveDefaults.defaultId}'
               WHERE sleeve_id IS NULL OR sleeve_id = ''
+              ''',
+            );
+          }
+
+          if (from < 5) {
+            await m.addColumn(persons, persons.lastActiveSleeveId);
+
+            await customStatement(
+              '''
+              UPDATE persons
+              SET last_active_sleeve_id = '${SleeveDefaults.defaultId}'
+              WHERE last_active_sleeve_id IS NULL OR last_active_sleeve_id = ''
               ''',
             );
           }

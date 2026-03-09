@@ -33,6 +33,12 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('de'));
+  static const VerificationMeta _lastActiveSleeveIdMeta =
+      const VerificationMeta('lastActiveSleeveId');
+  @override
+  late final GeneratedColumn<String> lastActiveSleeveId =
+      GeneratedColumn<String>('last_active_sleeve_id', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -46,8 +52,15 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
       'updated_at', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns =>
-      [personId, displayName, role, language, createdAt, updatedAt];
+  List<GeneratedColumn> get $columns => [
+        personId,
+        displayName,
+        role,
+        language,
+        lastActiveSleeveId,
+        createdAt,
+        updatedAt
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -82,6 +95,12 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
       context.handle(_languageMeta,
           language.isAcceptableOrUnknown(data['language']!, _languageMeta));
     }
+    if (data.containsKey('last_active_sleeve_id')) {
+      context.handle(
+          _lastActiveSleeveIdMeta,
+          lastActiveSleeveId.isAcceptableOrUnknown(
+              data['last_active_sleeve_id']!, _lastActiveSleeveIdMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -111,6 +130,8 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
           .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
       language: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}language'])!,
+      lastActiveSleeveId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}last_active_sleeve_id']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -129,6 +150,7 @@ class Person extends DataClass implements Insertable<Person> {
   final String displayName;
   final String role;
   final String language;
+  final String? lastActiveSleeveId;
   final int createdAt;
   final int updatedAt;
   const Person(
@@ -136,6 +158,7 @@ class Person extends DataClass implements Insertable<Person> {
       required this.displayName,
       required this.role,
       required this.language,
+      this.lastActiveSleeveId,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -145,6 +168,9 @@ class Person extends DataClass implements Insertable<Person> {
     map['display_name'] = Variable<String>(displayName);
     map['role'] = Variable<String>(role);
     map['language'] = Variable<String>(language);
+    if (!nullToAbsent || lastActiveSleeveId != null) {
+      map['last_active_sleeve_id'] = Variable<String>(lastActiveSleeveId);
+    }
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
     return map;
@@ -156,6 +182,9 @@ class Person extends DataClass implements Insertable<Person> {
       displayName: Value(displayName),
       role: Value(role),
       language: Value(language),
+      lastActiveSleeveId: lastActiveSleeveId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastActiveSleeveId),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -169,6 +198,8 @@ class Person extends DataClass implements Insertable<Person> {
       displayName: serializer.fromJson<String>(json['displayName']),
       role: serializer.fromJson<String>(json['role']),
       language: serializer.fromJson<String>(json['language']),
+      lastActiveSleeveId:
+          serializer.fromJson<String?>(json['lastActiveSleeveId']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
     );
@@ -181,6 +212,7 @@ class Person extends DataClass implements Insertable<Person> {
       'displayName': serializer.toJson<String>(displayName),
       'role': serializer.toJson<String>(role),
       'language': serializer.toJson<String>(language),
+      'lastActiveSleeveId': serializer.toJson<String?>(lastActiveSleeveId),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
     };
@@ -191,6 +223,7 @@ class Person extends DataClass implements Insertable<Person> {
           String? displayName,
           String? role,
           String? language,
+          Value<String?> lastActiveSleeveId = const Value.absent(),
           int? createdAt,
           int? updatedAt}) =>
       Person(
@@ -198,6 +231,9 @@ class Person extends DataClass implements Insertable<Person> {
         displayName: displayName ?? this.displayName,
         role: role ?? this.role,
         language: language ?? this.language,
+        lastActiveSleeveId: lastActiveSleeveId.present
+            ? lastActiveSleeveId.value
+            : this.lastActiveSleeveId,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -208,6 +244,9 @@ class Person extends DataClass implements Insertable<Person> {
           data.displayName.present ? data.displayName.value : this.displayName,
       role: data.role.present ? data.role.value : this.role,
       language: data.language.present ? data.language.value : this.language,
+      lastActiveSleeveId: data.lastActiveSleeveId.present
+          ? data.lastActiveSleeveId.value
+          : this.lastActiveSleeveId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -220,6 +259,7 @@ class Person extends DataClass implements Insertable<Person> {
           ..write('displayName: $displayName, ')
           ..write('role: $role, ')
           ..write('language: $language, ')
+          ..write('lastActiveSleeveId: $lastActiveSleeveId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -227,8 +267,8 @@ class Person extends DataClass implements Insertable<Person> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(personId, displayName, role, language, createdAt, updatedAt);
+  int get hashCode => Object.hash(personId, displayName, role, language,
+      lastActiveSleeveId, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -237,6 +277,7 @@ class Person extends DataClass implements Insertable<Person> {
           other.displayName == this.displayName &&
           other.role == this.role &&
           other.language == this.language &&
+          other.lastActiveSleeveId == this.lastActiveSleeveId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -246,6 +287,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
   final Value<String> displayName;
   final Value<String> role;
   final Value<String> language;
+  final Value<String?> lastActiveSleeveId;
   final Value<int> createdAt;
   final Value<int> updatedAt;
   final Value<int> rowid;
@@ -254,6 +296,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     this.displayName = const Value.absent(),
     this.role = const Value.absent(),
     this.language = const Value.absent(),
+    this.lastActiveSleeveId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -263,6 +306,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     required String displayName,
     required String role,
     this.language = const Value.absent(),
+    this.lastActiveSleeveId = const Value.absent(),
     required int createdAt,
     required int updatedAt,
     this.rowid = const Value.absent(),
@@ -276,6 +320,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     Expression<String>? displayName,
     Expression<String>? role,
     Expression<String>? language,
+    Expression<String>? lastActiveSleeveId,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? rowid,
@@ -285,6 +330,8 @@ class PersonsCompanion extends UpdateCompanion<Person> {
       if (displayName != null) 'display_name': displayName,
       if (role != null) 'role': role,
       if (language != null) 'language': language,
+      if (lastActiveSleeveId != null)
+        'last_active_sleeve_id': lastActiveSleeveId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -296,6 +343,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
       Value<String>? displayName,
       Value<String>? role,
       Value<String>? language,
+      Value<String?>? lastActiveSleeveId,
       Value<int>? createdAt,
       Value<int>? updatedAt,
       Value<int>? rowid}) {
@@ -304,6 +352,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
       displayName: displayName ?? this.displayName,
       role: role ?? this.role,
       language: language ?? this.language,
+      lastActiveSleeveId: lastActiveSleeveId ?? this.lastActiveSleeveId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -325,6 +374,9 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     if (language.present) {
       map['language'] = Variable<String>(language.value);
     }
+    if (lastActiveSleeveId.present) {
+      map['last_active_sleeve_id'] = Variable<String>(lastActiveSleeveId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -344,6 +396,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
           ..write('displayName: $displayName, ')
           ..write('role: $role, ')
           ..write('language: $language, ')
+          ..write('lastActiveSleeveId: $lastActiveSleeveId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -2246,6 +2299,7 @@ typedef $$PersonsTableCreateCompanionBuilder = PersonsCompanion Function({
   required String displayName,
   required String role,
   Value<String> language,
+  Value<String?> lastActiveSleeveId,
   required int createdAt,
   required int updatedAt,
   Value<int> rowid,
@@ -2255,6 +2309,7 @@ typedef $$PersonsTableUpdateCompanionBuilder = PersonsCompanion Function({
   Value<String> displayName,
   Value<String> role,
   Value<String> language,
+  Value<String?> lastActiveSleeveId,
   Value<int> createdAt,
   Value<int> updatedAt,
   Value<int> rowid,
@@ -2279,6 +2334,10 @@ class $$PersonsTableFilterComposer extends Composer<_$AppDb, $PersonsTable> {
 
   ColumnFilters<String> get language => $composableBuilder(
       column: $table.language, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get lastActiveSleeveId => $composableBuilder(
+      column: $table.lastActiveSleeveId,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -2307,6 +2366,10 @@ class $$PersonsTableOrderingComposer extends Composer<_$AppDb, $PersonsTable> {
   ColumnOrderings<String> get language => $composableBuilder(
       column: $table.language, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get lastActiveSleeveId => $composableBuilder(
+      column: $table.lastActiveSleeveId,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -2334,6 +2397,9 @@ class $$PersonsTableAnnotationComposer
 
   GeneratedColumn<String> get language =>
       $composableBuilder(column: $table.language, builder: (column) => column);
+
+  GeneratedColumn<String> get lastActiveSleeveId => $composableBuilder(
+      column: $table.lastActiveSleeveId, builder: (column) => column);
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2369,6 +2435,7 @@ class $$PersonsTableTableManager extends RootTableManager<
             Value<String> displayName = const Value.absent(),
             Value<String> role = const Value.absent(),
             Value<String> language = const Value.absent(),
+            Value<String?> lastActiveSleeveId = const Value.absent(),
             Value<int> createdAt = const Value.absent(),
             Value<int> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -2378,6 +2445,7 @@ class $$PersonsTableTableManager extends RootTableManager<
             displayName: displayName,
             role: role,
             language: language,
+            lastActiveSleeveId: lastActiveSleeveId,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -2387,6 +2455,7 @@ class $$PersonsTableTableManager extends RootTableManager<
             required String displayName,
             required String role,
             Value<String> language = const Value.absent(),
+            Value<String?> lastActiveSleeveId = const Value.absent(),
             required int createdAt,
             required int updatedAt,
             Value<int> rowid = const Value.absent(),
@@ -2396,6 +2465,7 @@ class $$PersonsTableTableManager extends RootTableManager<
             displayName: displayName,
             role: role,
             language: language,
+            lastActiveSleeveId: lastActiveSleeveId,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,

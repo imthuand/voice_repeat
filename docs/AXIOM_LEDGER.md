@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: e11bf05
+- Current reference commit: 465248c
 
 ## Core Invariants
 - Never zero empty slots
@@ -20,13 +20,22 @@
 
 ## Data Model
 ### schemaVersion
-- Current: 4
+- Current: 5
 
 ### Tables
 - Persons
 - Sleeves
 - RitualItems
 - RitualEvents
+
+### Persons notable fields
+- personId
+- displayName
+- role
+- language
+- lastActiveSleeveId
+- createdAt
+- updatedAt
 
 ### Sleeves notable fields
 - sleeveId
@@ -75,6 +84,8 @@
 ### RitualRepo
 - ensureDefaultPerson()
 - ensureDefaultSleeve()
+- getLastActiveSleeveId()
+- setLastActiveSleeveId()
 - ensureInitialSlots()
 - ensureAtLeastOneEmpty()
 - watchSleeves()
@@ -95,6 +106,7 @@
 - logEvent()
 
 ### VoiceButtonsController
+- initializeSleeveSelection()
 - setActiveSleeve()
 - createSleeve()
 - renameActiveSleeve()
@@ -127,25 +139,19 @@
 - Verification script: tool/verify.bat
 
 ## Current Branch Status
-### Already implemented before sleeves
-- schemaVersion 3 hardening and integrity layer
-- file existence checks in FileStorage
-- manual integrity check from UI
-- integrity issue badge in UI
-- snackbar based user feedback in controller and screen
-- shared constants normalized across integrity layer
-- strict enforcement mode prepared in repo and integrity events
-- recovery and repair domain paths for missing recorded and archived items
-- global integrity actions for check only, repair active, and repair all
-- finalized integrity UX hardening
+### Already implemented before this step
+- schemaVersion 4 sleeves foundation
+- sleeve aware queries
+- sleeve creation, rename, delete
+- integrity and recovery hardening
+- global integrity repair actions
 
-### Sleeve v1 purpose
-- Introduce explicit sleeve domain model
-- Keep default sleeve stable
-- Make active and archived queries sleeve aware
-- Add sleeve switching and sleeve management in UI
-- Keep migration low risk by preserving existing items on default sleeve
-- Avoid advanced sleeve features such as drag and drop, icons, colors, and reordering for now
+### This commit purpose
+- Make sleeve selection the primary navigation control
+- Persist the last used sleeve per person
+- Restore last used sleeve on startup
+- Fall back to default sleeve after sleeve deletion
+- Remove hidden horizontal sleeve overflow
 
 ## Sleeve Rules
 - Every person has a stable default sleeve
@@ -154,10 +160,12 @@
 - A sleeve can only be deleted when all of its items are empty
 - Active and archived views are always filtered by current sleeve
 - Integrity checks still run across the whole person scope
+- Last used sleeve is restored on app start when it still exists
+- If the active sleeve is deleted, the app switches to default sleeve and persists that change
 
 ## Next Planned Work
 ### Next major step
-- Sleeve refinement and move items between sleeves
+- Move items between sleeves
 - Optional sleeve reordering
 - Optional sleeve icons and colors
 

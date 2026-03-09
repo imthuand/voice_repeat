@@ -50,8 +50,18 @@ class VoiceButtonsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> initializeSleeveSelection() async {
+    final saved = await repo.getLastActiveSleeveId(personId: personId);
+    activeSleeveId = saved;
+    notifyListeners();
+  }
+
   Future<void> setActiveSleeve(String sleeveId) async {
     activeSleeveId = sleeveId;
+    await repo.setLastActiveSleeveId(
+      personId: personId,
+      sleeveId: sleeveId,
+    );
     notifyListeners();
   }
 
@@ -62,6 +72,10 @@ class VoiceButtonsController extends ChangeNotifier {
         name: name,
       );
       activeSleeveId = sleeveId;
+      await repo.setLastActiveSleeveId(
+        personId: personId,
+        sleeveId: sleeveId,
+      );
       _emitUi('Sleeve created.');
     } catch (e) {
       _emitUi(e.toString().replaceFirst('Bad state: ', ''));
@@ -88,6 +102,10 @@ class VoiceButtonsController extends ChangeNotifier {
         sleeveId: activeSleeveId,
       );
       activeSleeveId = SleeveDefaults.defaultId;
+      await repo.setLastActiveSleeveId(
+        personId: personId,
+        sleeveId: SleeveDefaults.defaultId,
+      );
       _emitUi('Sleeve deleted.');
       notifyListeners();
     } catch (e) {

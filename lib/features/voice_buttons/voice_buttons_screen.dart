@@ -45,8 +45,10 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     tabs = TabController(length: 2, vsync: this);
 
     Future.microtask(() async {
+      await repo.ensureDefaultPerson();
       await repo.ensureDefaultSleeve(widget.personId);
       await repo.ensureInitialSlots(widget.personId, initial: 4);
+      await controller.initializeSleeveSelection();
       if (!mounted) return;
       setState(() {});
     });
@@ -357,7 +359,7 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     );
   }
 
-  Widget _sleeveBar(List<Sleeve> sleeves) {
+  Widget _sleeveSelector(List<Sleeve> sleeves) {
     final activeId = controller.activeSleeveId;
     final activeSleeve = sleeves.firstWhere(
       (s) => s.sleeveId == activeId,
@@ -375,60 +377,62 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-      child: Column(
+      margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
         children: [
-          SizedBox(
-            height: 38,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: sleeves.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final sleeve = sleeves[i];
-                final selected = sleeve.sleeveId == activeId;
-                return ChoiceChip(
-                  label: Text(sleeve.name),
-                  selected: selected,
-                  onSelected: (_) => controller.setActiveSleeve(sleeve.sleeveId),
-                );
-              },
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: activeSleeve.sleeveId,
+                dropdownColor: Colors.black87,
+                isExpanded: true,
+                items: sleeves
+                    .map(
+                      (sleeve) => DropdownMenuItem<String>(
+                        value: sleeve.sleeveId,
+                        child: Text(
+                          sleeve.name,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) async {
+                  if (value == null) return;
+                  await controller.setActiveSleeve(value);
+                },
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Current sleeve: ${activeSleeve.name}',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              ),
-              IconButton(
-                tooltip: 'New sleeve',
-                onPressed: _createSleeveDialog,
-                icon: const Icon(Icons.add, color: Colors.white),
-              ),
-              IconButton(
-                tooltip: 'Rename sleeve',
-                onPressed: activeSleeve.sleeveId == SleeveDefaults.defaultId
-                    ? null
-                    : () => _renameSleeveDialog(activeSleeve),
-                icon: const Icon(Icons.edit_outlined, color: Colors.white),
-              ),
-              IconButton(
-                tooltip: 'Delete sleeve',
-                onPressed: activeSleeve.sleeveId == SleeveDefaults.defaultId
-                    ? null
-                    : () async {
-                        final confirmed =
-                            await _confirmDeleteSleeveDialog(activeSleeve);
-                        if (!confirmed) return;
-                        await controller.deleteActiveSleeve();
-                      },
-                icon: const Icon(Icons.delete_outline, color: Colors.white),
-              ),
-            ],
+          IconButton(
+            tooltip: 'New sleeve',
+            onPressed: _createSleeveDialog,
+            icon: const Icon(Icons.add, color: Colors.white),
+          ),
+          IconButton(
+            tooltip: 'Rename sleeve',
+            onPressed: activeSleeve.sleeveId == SleeveDefaults.defaultId
+                ? null
+                : () => _renameSleeveDialog(activeSleeve),
+            icon: const Icon(Icons.edit_outlined, color: Colors.white),
+          ),
+          IconButton(
+            tooltip: 'Delete sleeve',
+            onPressed: activeSleeve.sleeveId == SleeveDefaults.defaultId
+                ? null
+                : () async {
+                    final confirmed =
+                        await _confirmDeleteSleeveDialog(activeSleeve);
+                    if (!confirmed) return;
+                    await controller.deleteActiveSleeve();
+                  },
+            icon: const Icon(Icons.delete_outline, color: Colors.white),
           ),
         ],
       ),
@@ -444,8 +448,8 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
 
         if (sleeves.isNotEmpty &&
             !sleeves.any((s) => s.sleeveId == controller.activeSleeveId)) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            controller.setActiveSleeve(sleeves.first.sleeveId);
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            await controller.setActiveSleeve(SleeveDefaults.defaultId);
           });
         }
 
@@ -502,7 +506,7 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
 
               return Column(
                 children: [
-                  _sleeveBar(sleeves),
+                  if (sleeves.isNotEmpty) _sleeveSelector(sleeves),
                   Expanded(
                     child: TabBarView(
                       controller: tabs,
@@ -544,7 +548,8 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
       children: [
         _integrityInfoBanner(
           items: items,
-          emptyText: 'Active items in this sleeve are currently in a healthy state.',
+          emptyText:
+              'Active items in this sleeve are currently in a healthy state.',
         ),
         Expanded(
           child: Padding(
@@ -607,7 +612,8 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
       children: [
         _integrityInfoBanner(
           items: items,
-          emptyText: 'Archived items in this sleeve are currently in a healthy state.',
+          emptyText:
+              'Archived items in this sleeve are currently in a healthy state.',
         ),
         Expanded(
           child: ListView.separated(
