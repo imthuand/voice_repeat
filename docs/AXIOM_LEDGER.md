@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: 7e6c1c6
+- Current reference commit: 02bc808
 
 ## Core Invariants
 - Never zero empty slots
@@ -89,6 +89,8 @@
 - deleteActive()
 - deleteArchived()
 - clearSlotKeepButton()
+- repairRecordedIssueToEmpty()
+- repairArchivedIssueToEmpty()
 - runIntegrityCheck()
 
 ### IntegrityService
@@ -114,12 +116,13 @@
 - Snackbar based user feedback in controller and screen
 - Shared constants normalized across integrity layer
 - Strict enforcement mode prepared in repo and integrity events
+- Recovery and repair domain paths for missing recorded and archived items
 
-### Commit 4A purpose
-- Add controlled repair methods at domain layer
-- Allow integrity checks to optionally repair missing references back to empty
-- Preserve invariants while moving broken items back into a safe state
-- Keep runtime default behavior conservative
+### Commit 4B purpose
+- Expose repair actions in the integrity dialog
+- Let users repair broken recorded and archived references back to empty
+- Keep delete as destructive option
+- Provide immediate feedback through existing snackbar mechanism
 
 ## Enforcement Model
 ### Soft
@@ -145,9 +148,9 @@
 
 ## Next Planned Work
 ### Next commit
-- Recovery actions exposed in UI
-- Dialog actions for repair to empty
-- Immediate feedback and badge reset after repair
+- Optional one click repair during integrity checks
+- Recovery summaries and more explicit repair result messages
+- Better distinction between destructive delete and repair
 
 ### Later
 - Sleeves

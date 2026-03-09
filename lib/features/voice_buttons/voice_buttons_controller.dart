@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+
 import '../../data/repositories/ritual_repo.dart';
 import '../../data/services/integrity_service.dart';
 import '../../infrastructure/audio_service.dart';
@@ -9,6 +10,7 @@ import '../../infrastructure/file_storage.dart';
 class UiMessage {
   final int id;
   final String text;
+
   const UiMessage(this.id, this.text);
 }
 
@@ -25,8 +27,11 @@ class VoiceButtonsController extends ChangeNotifier {
   final FileStorage storage;
   final String personId;
 
-  late final IntegrityService integrity =
-      IntegrityService(db: repo.db, repo: repo, storage: storage);
+  late final IntegrityService integrity = IntegrityService(
+    db: repo.db,
+    repo: repo,
+    storage: storage,
+  );
 
   String? recordingItemId;
   String? playingItemId;
@@ -44,9 +49,11 @@ class VoiceButtonsController extends ChangeNotifier {
 
   Future<void> _stopPlayingIfAny() async {
     if (playingItemId == null) return;
+
     try {
       await audio.stopPlay();
     } catch (_) {}
+
     playingItemId = null;
     notifyListeners();
   }
@@ -60,6 +67,7 @@ class VoiceButtonsController extends ChangeNotifier {
       size = await storage.fileSize(path);
       if (size > 0) return size;
     }
+
     return size;
   }
 
@@ -98,7 +106,8 @@ class VoiceButtonsController extends ChangeNotifier {
     } catch (_) {}
 
     final fallbackPath =
-        _recordingPathByItemId.remove(itemId) ?? await storage.newActivePath(itemId);
+        _recordingPathByItemId.remove(itemId) ??
+        await storage.newActivePath(itemId);
     final path = stoppedPath ?? fallbackPath;
 
     recordingItemId = null;
@@ -126,6 +135,7 @@ class VoiceButtonsController extends ChangeNotifier {
       try {
         await audio.stopPlay();
       } catch (_) {}
+
       playingItemId = null;
       notifyListeners();
       return false;
@@ -161,9 +171,14 @@ class VoiceButtonsController extends ChangeNotifier {
       _emitUi('Cannot archive. Audio file is missing.');
       return;
     }
+
     final to = await storage.archivePath(itemId);
     await storage.move(activePath, to);
-    await repo.setArchived(personId: personId, itemId: itemId, archivedPath: to);
+    await repo.setArchived(
+      personId: personId,
+      itemId: itemId,
+      archivedPath: to,
+    );
   }
 
   Future<void> restore(String itemId, String archivedPath) async {
@@ -172,38 +187,60 @@ class VoiceButtonsController extends ChangeNotifier {
       _emitUi('Cannot restore. Audio file is missing.');
       return;
     }
+
     final to = await storage.newActivePath(itemId);
     await storage.move(archivedPath, to);
-    await repo.restore(personId: personId, itemId: itemId, activePath: to);
+    await repo.restore(
+      personId: personId,
+      itemId: itemId,
+      activePath: to,
+    );
   }
 
-  /// Delete removes the slot row so the button disappears
   Future<void> deleteActive(String itemId, {String? activePath}) async {
     await _stopPlayingIfAny();
 
     if (activePath != null) {
       await storage.deleteIfExists(activePath);
     }
+
     await repo.deleteSlot(personId: personId, itemId: itemId);
     _emitUi('Slot deleted.');
   }
 
-  /// Delete removes the slot row so the button disappears
   Future<void> deleteArchived(String itemId, {String? archivedPath}) async {
     await _stopPlayingIfAny();
 
     if (archivedPath != null) {
       await storage.deleteIfExists(archivedPath);
     }
+
     await repo.deleteSlot(personId: personId, itemId: itemId);
     _emitUi('Slot deleted.');
   }
 
-  /// Optional helper if you still want a "clear but keep the slot" UX somewhere
   Future<void> clearSlotKeepButton(String itemId) async {
     await _stopPlayingIfAny();
     await repo.clearToEmpty(personId: personId, itemId: itemId);
     _emitUi('Slot cleared.');
+  }
+
+  Future<void> repairRecordedIssueToEmpty(String itemId) async {
+    await _stopPlayingIfAny();
+    await repo.repairMissingRecordedToEmpty(
+      personId: personId,
+      itemId: itemId,
+    );
+    _emitUi('Broken recorded item repaired to empty.');
+  }
+
+  Future<void> repairArchivedIssueToEmpty(String itemId) async {
+    await _stopPlayingIfAny();
+    await repo.repairMissingArchivedToEmpty(
+      personId: personId,
+      itemId: itemId,
+    );
+    _emitUi('Broken archived item repaired to empty.');
   }
 
   Future<IntegritySummary> runIntegrityCheck() async {

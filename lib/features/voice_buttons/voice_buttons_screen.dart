@@ -23,7 +23,8 @@ class VoiceButtonsScreen extends StatefulWidget {
   State<VoiceButtonsScreen> createState() => _VoiceButtonsScreenState();
 }
 
-class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTickerProviderStateMixin {
+class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
+    with SingleTickerProviderStateMixin {
   late final RitualRepo repo;
   late final VoiceButtonsController controller;
   late final TabController tabs;
@@ -50,8 +51,13 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTick
     super.dispose();
   }
 
-  Future<void> _renameDialog(BuildContext context, String itemId, String current) async {
+  Future<void> _renameDialog(
+    BuildContext context,
+    String itemId,
+    String current,
+  ) async {
     final c = TextEditingController(text: current);
+
     final label = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
@@ -62,13 +68,25 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTick
           decoration: const InputDecoration(hintText: 'Zähne putzen'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, c.text.trim()), child: const Text('Save')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, c.text.trim()),
+            child: const Text('Save'),
+          ),
         ],
       ),
     );
+
     if (label == null) return;
-    await repo.rename(personId: widget.personId, itemId: itemId, label: label);
+
+    await repo.rename(
+      personId: widget.personId,
+      itemId: itemId,
+      label: label,
+    );
   }
 
   Future<void> _integrityDialog(BuildContext context, RitualItem it) async {
@@ -78,11 +96,25 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTick
     final details = <String>[];
     details.add('Status: $status');
     details.add('State: ${it.state}');
-    if (it.activePath != null && it.activePath!.isNotEmpty) details.add('Active: ${it.activePath}');
-    if (it.archivedPath != null && it.archivedPath!.isNotEmpty) details.add('Archive: ${it.archivedPath}');
-    if (it.integrityCheckedAt != null) {
-      details.add('Checked: ${DateTime.fromMillisecondsSinceEpoch(it.integrityCheckedAt!).toLocal()}');
+
+    if (it.activePath != null && it.activePath!.isNotEmpty) {
+      details.add('Active: ${it.activePath}');
     }
+
+    if (it.archivedPath != null && it.archivedPath!.isNotEmpty) {
+      details.add('Archive: ${it.archivedPath}');
+    }
+
+    if (it.integrityCheckedAt != null) {
+      details.add(
+        'Checked: ${DateTime.fromMillisecondsSinceEpoch(it.integrityCheckedAt!).toLocal()}',
+      );
+    }
+
+    final canRepairRecorded =
+        status != RitualRepo.integrityOk && it.state == RitualRepo.stateRecorded;
+    final canRepairArchived =
+        status != RitualRepo.integrityOk && it.state == RitualRepo.stateArchived;
 
     final action = await showDialog<String>(
       context: context,
@@ -90,23 +122,59 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTick
         title: Text(title),
         content: Text(details.join('\n\n')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-          TextButton(onPressed: () => Navigator.pop(context, 'check'), child: const Text('Run check')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'check'),
+            child: const Text('Run check'),
+          ),
+          if (canRepairRecorded)
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'repairRecorded'),
+              child: const Text('Repair to empty'),
+            ),
+          if (canRepairArchived)
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'repairArchived'),
+              child: const Text('Repair to empty'),
+            ),
           if (status != RitualRepo.integrityOk)
-            TextButton(onPressed: () => Navigator.pop(context, 'clear'), child: const Text('Clear slot')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'delete'),
+              child: const Text('Delete slot'),
+            ),
         ],
       ),
     );
 
     if (action == 'check') {
       await controller.runIntegrityCheck();
+      return;
     }
 
-    if (action == 'clear') {
+    if (action == 'repairRecorded') {
+      await controller.repairRecordedIssueToEmpty(it.itemId);
+      return;
+    }
+
+    if (action == 'repairArchived') {
+      await controller.repairArchivedIssueToEmpty(it.itemId);
+      return;
+    }
+
+    if (action == 'delete') {
       if (it.state == RitualRepo.stateArchived) {
-        await controller.deleteArchived(it.itemId, archivedPath: it.archivedPath);
+        await controller.deleteArchived(
+          it.itemId,
+          archivedPath: it.archivedPath,
+        );
       } else {
-        await controller.deleteActive(it.itemId, activePath: it.activePath);
+        await controller.deleteActive(
+          it.itemId,
+          activePath: it.activePath,
+        );
       }
     }
   }
@@ -147,20 +215,21 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTick
               );
             });
           }
+
           return TabBarView(
             controller: tabs,
             children: [
               StreamBuilder<List<RitualItem>>(
                 stream: repo.watchActive(widget.personId),
                 builder: (context, snap) {
-                  final items = snap.data ?? const <RitualItem>[];
+                  final items = snap.data ?? const [];
                   return _gridActive(context, items);
                 },
               ),
               StreamBuilder<List<RitualItem>>(
                 stream: repo.watchArchived(widget.personId),
                 builder: (context, snap) {
-                  final items = snap.data ?? const <RitualItem>[];
+                  final items = snap.data ?? const [];
                   return _listArchive(context, items);
                 },
               ),
@@ -194,9 +263,13 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTick
             onTap: () async {
               final path = it.activePath;
               if (path == null) return;
+
               final didPlay = await controller.togglePlay(it.itemId, path);
               if (didPlay) {
-                await repo.markPlayed(personId: widget.personId, itemId: it.itemId);
+                await repo.markPlayed(
+                  personId: widget.personId,
+                  itemId: it.itemId,
+                );
               }
             },
             onRename: () => _renameDialog(context, it.itemId, it.label),
@@ -205,7 +278,10 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTick
               if (path == null) return;
               await controller.archive(it.itemId, path);
             },
-            onDelete: () => controller.deleteActive(it.itemId, activePath: it.activePath),
+            onDelete: () => controller.deleteActive(
+              it.itemId,
+              activePath: it.activePath,
+            ),
           );
         },
       ),
@@ -221,21 +297,36 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTick
         final it = items[i];
         return Dismissible(
           key: ValueKey('arch_${it.itemId}'),
-          background: _swipeBg('RESTORE', Icons.unarchive_outlined, left: true),
-          secondaryBackground: _swipeBg('DELETE', Icons.delete_outline, left: false),
+          background: _swipeBg(
+            'RESTORE',
+            Icons.unarchive_outlined,
+            left: true,
+          ),
+          secondaryBackground: _swipeBg(
+            'DELETE',
+            Icons.delete_outline,
+            left: false,
+          ),
           confirmDismiss: (dir) async {
             if (dir == DismissDirection.startToEnd) {
               final ap = it.archivedPath;
-              if (ap != null) await controller.restore(it.itemId, ap);
+              if (ap != null) {
+                await controller.restore(it.itemId, ap);
+              }
               return false;
             } else {
-              await controller.deleteArchived(it.itemId, archivedPath: it.archivedPath);
+              await controller.deleteArchived(
+                it.itemId,
+                archivedPath: it.archivedPath,
+              );
               return false;
             }
           },
           child: ListTile(
             tileColor: Colors.white10,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: Text(
               it.label.isEmpty ? 'Archived item' : it.label,
               style: const TextStyle(color: Colors.white),
@@ -255,18 +346,28 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTick
                   IconButton(
                     tooltip: 'Integrity',
                     onPressed: () => _integrityDialog(context, it),
-                    icon: const Icon(Icons.error_outline, color: Colors.white70),
+                    icon: const Icon(
+                      Icons.error_outline,
+                      color: Colors.white70,
+                    ),
                   ),
                 IconButton(
                   onPressed: () async {
                     final path = it.archivedPath;
                     if (path == null) return;
+
                     final didPlay = await controller.togglePlay(it.itemId, path);
                     if (didPlay) {
-                      await repo.markPlayed(personId: widget.personId, itemId: it.itemId);
+                      await repo.markPlayed(
+                        personId: widget.personId,
+                        itemId: it.itemId,
+                      );
                     }
                   },
-                  icon: const Icon(Icons.play_arrow, color: Colors.white),
+                  icon: const Icon(
+                    Icons.play_arrow,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -290,10 +391,22 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> with SingleTick
             ? [
                 Icon(icon, color: Colors.white70),
                 const SizedBox(width: 10),
-                Text(text, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700)),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ]
             : [
-                Text(text, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700)),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(width: 10),
                 Icon(icon, color: Colors.white70),
               ],
@@ -319,13 +432,10 @@ class _ActiveTile extends StatefulWidget {
   final RitualItem item;
   final bool isRecording;
   final bool isPlaying;
-
   final VoidCallback onIntegrityTap;
-
   final Future<void> Function() onHoldStart;
   final Future<void> Function() onHoldEnd;
   final Future<void> Function() onTap;
-
   final VoidCallback onRename;
   final VoidCallback onArchive;
   final VoidCallback onDelete;
@@ -340,7 +450,6 @@ class _ActiveTileState extends State<_ActiveTile> {
   Timer? _timer;
   bool _holdActivated = false;
   bool _pointerDown = false;
-
   int _pressToken = 0;
 
   void _reset() {
@@ -386,7 +495,6 @@ class _ActiveTileState extends State<_ActiveTile> {
       onPointerDown: (_) {
         _pointerDown = true;
         _holdActivated = false;
-
         _pressToken++;
         final token = _pressToken;
 
@@ -429,6 +537,7 @@ class _ActiveTileState extends State<_ActiveTile> {
         if (wasHold) {
           await widget.onHoldEnd();
         }
+
         _reset();
       },
       child: Container(
@@ -447,7 +556,12 @@ class _ActiveTileState extends State<_ActiveTile> {
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14, height: 1.0),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      height: 1.0,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -456,30 +570,48 @@ class _ActiveTileState extends State<_ActiveTile> {
                   IconButton(
                     tooltip: 'Integrity',
                     onPressed: widget.onIntegrityTap,
-                    icon: const Icon(Icons.error_outline, color: Colors.white70, size: 20),
+                    icon: const Icon(
+                      Icons.error_outline,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
                   ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.white70, size: 20),
+                  icon: const Icon(
+                    Icons.more_vert,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
                   onSelected: (v) {
                     if (v == 'rename') widget.onRename();
                     if (v == 'archive') widget.onArchive();
                     if (v == 'delete') widget.onDelete();
                   },
                   itemBuilder: (_) => [
-                    const PopupMenuItem(value: 'rename', child: Text('Rename')),
+                    const PopupMenuItem(
+                      value: 'rename',
+                      child: Text('Rename'),
+                    ),
                     PopupMenuItem(
                       value: 'archive',
                       enabled: !isEmpty && it.activePath != null,
                       child: const Text('Archive'),
                     ),
-                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
                   ],
                 ),
               ],
             ),
             Text(
               footer,
-              style: const TextStyle(color: Colors.white60, fontSize: 11, height: 1.0),
+              style: const TextStyle(
+                color: Colors.white60,
+                fontSize: 11,
+                height: 1.0,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
