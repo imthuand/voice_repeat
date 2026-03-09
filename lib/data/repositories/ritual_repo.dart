@@ -14,6 +14,7 @@ enum RitualEventType {
   restored,
   deleted,
   renamed,
+  integrityAutoFixed,
 }
 
 extension RitualEventTypeName on RitualEventType {
@@ -31,6 +32,8 @@ extension RitualEventTypeName on RitualEventType {
         return RitualEventName.deleted;
       case RitualEventType.renamed:
         return RitualEventName.renamed;
+      case RitualEventType.integrityAutoFixed:
+        return RitualEventName.integrityAutoFixed;
     }
   }
 }
@@ -53,6 +56,7 @@ class RitualRepo {
   static const String integrityOk = IntegrityStatus.ok;
   static const String integrityMissingPath = IntegrityStatus.missingPath;
   static const String integrityMissingFile = IntegrityStatus.missingFile;
+  static const String integrityPathMismatch = IntegrityStatus.pathMismatch;
 
   bool get isStrict => enforcementMode == EnforcementMode.strict;
 
@@ -62,6 +66,17 @@ class RitualRepo {
     if (!allowed.contains(actual)) {
       throw StateError('Invalid state for $action: $actual');
     }
+  }
+
+  void _ensureIntegrityIssue(String actual, String action) {
+    if ({
+      integrityMissingPath,
+      integrityMissingFile,
+      integrityPathMismatch,
+    }.contains(actual)) {
+      return;
+    }
+    throw StateError('Invalid $action: integrityStatus is not repairable: $actual');
   }
 
   void _requireNonEmptyPath(String path, String action, String fieldName) {
@@ -452,6 +467,92 @@ class RitualRepo {
       );
 
       await (db.delete(db.ritualItems)..where((t) => t.itemId.equals(itemId))).go();
+
+      await _ensureAtLeastOneEmptyTx(personId);
+    });
+  }
+
+  Future<void> repairMissingRecordedToEmpty({
+    required String personId,
+    required String itemId,
+  }) async {
+    final now = _now();
+
+    await db.transaction(() async {
+      final it = await _getByIdTx(itemId);
+
+      _ensureState(it.state, {stateRecorded}, 'repairMissingRecordedToEmpty');
+      _ensureIntegrityIssue(it.integrityStatus, 'repairMissingRecordedToEmpty');
+
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId))).write(
+        RitualItemsCompanion(
+          state: const Value(stateEmpty),
+          label: Value(it.label),
+          searchText: Value(_normalizeSearchText(it.label)),
+          activePath: const Value(null),
+          archivedPath: const Value(null),
+          sizeBytes: const Value(0),
+          recordedAt: const Value(null),
+          archivedAt: const Value(null),
+          integrityStatus: const Value(integrityOk),
+          integrityCheckedAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+
+      await logEvent(
+        personId: personId,
+        itemId: itemId,
+        type: RitualEventType.integrityAutoFixed,
+        metadata: {
+          'repairAction': 'missing_recorded_to_empty',
+          'prevState': it.state,
+          'prevIntegrityStatus': it.integrityStatus,
+        },
+      );
+
+      await _ensureAtLeastOneEmptyTx(personId);
+    });
+  }
+
+  Future<void> repairMissingArchivedToEmpty({
+    required String personId,
+    required String itemId,
+  }) async {
+    final now = _now();
+
+    await db.transaction(() async {
+      final it = await _getByIdTx(itemId);
+
+      _ensureState(it.state, {stateArchived}, 'repairMissingArchivedToEmpty');
+      _ensureIntegrityIssue(it.integrityStatus, 'repairMissingArchivedToEmpty');
+
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId))).write(
+        RitualItemsCompanion(
+          state: const Value(stateEmpty),
+          label: Value(it.label),
+          searchText: Value(_normalizeSearchText(it.label)),
+          activePath: const Value(null),
+          archivedPath: const Value(null),
+          sizeBytes: const Value(0),
+          recordedAt: const Value(null),
+          archivedAt: const Value(null),
+          integrityStatus: const Value(integrityOk),
+          integrityCheckedAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+
+      await logEvent(
+        personId: personId,
+        itemId: itemId,
+        type: RitualEventType.integrityAutoFixed,
+        metadata: {
+          'repairAction': 'missing_archived_to_empty',
+          'prevState': it.state,
+          'prevIntegrityStatus': it.integrityStatus,
+        },
+      );
 
       await _ensureAtLeastOneEmptyTx(personId);
     });

@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: 7362cfb
+- Current reference commit: 7e6c1c6
 
 ## Core Invariants
 - Never zero empty slots
@@ -76,6 +76,8 @@
 - restore()
 - clearToEmpty()
 - deleteSlot()
+- repairMissingRecordedToEmpty()
+- repairMissingArchivedToEmpty()
 - logEvent()
 
 ### VoiceButtonsController
@@ -111,12 +113,13 @@
 - Integrity issue badge in UI
 - Snackbar based user feedback in controller and screen
 - Shared constants normalized across integrity layer
+- Strict enforcement mode prepared in repo and integrity events
 
-### Commit 3 purpose
-- Prepare strict enforcement mode without changing user visible flows
-- Make enforcement mode explicit in repo and integrity events
-- Add central validation guards for path and size dependent transitions
-- Keep runtime default in soft mode
+### Commit 4A purpose
+- Add controlled repair methods at domain layer
+- Allow integrity checks to optionally repair missing references back to empty
+- Preserve invariants while moving broken items back into a safe state
+- Keep runtime default behavior conservative
 
 ## Enforcement Model
 ### Soft
@@ -129,11 +132,22 @@
 - Reject missing paths and zero sized recordings at repo boundary
 - Improve auditability and future repair workflows
 
+## Recovery Model
+### Detection
+- Integrity service identifies missing path and missing file states
+
+### Repair
+- Missing recorded item can be repaired to empty
+- Missing archived item can be repaired to empty
+- Repair logs an explicit auto fixed event
+- Repair restores integrity status to ok
+- Repair preserves the invariant that there is always at least one empty slot
+
 ## Next Planned Work
 ### Next commit
-- Recovery and repair paths
-- Controlled clear or repair actions for broken items
-- Better reconciliation actions from UI
+- Recovery actions exposed in UI
+- Dialog actions for repair to empty
+- Immediate feedback and badge reset after repair
 
 ### Later
 - Sleeves

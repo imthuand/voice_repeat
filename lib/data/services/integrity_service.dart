@@ -35,6 +35,8 @@ class IntegrityService {
 
   Future<IntegritySummary> checkPerson({
     required String personId,
+    bool repairMissingRecordedToEmpty = false,
+    bool repairMissingArchivedToEmpty = false,
   }) async {
     final now = _now();
 
@@ -46,40 +48,56 @@ class IntegrityService {
     var issues = 0;
     var fixed = 0;
 
-    await db.transaction(() async {
-      for (final item in items) {
-        checked++;
+    for (final item in items) {
+      checked++;
 
-        final result = await _computeIntegrity(item);
+      final result = await _computeIntegrity(item);
 
-        await (db.update(db.ritualItems)..where((t) => t.itemId.equals(item.itemId))).write(
-          RitualItemsCompanion(
-            integrityStatus: Value(result.status),
-            integrityCheckedAt: Value(now),
-            updatedAt: Value(now),
-          ),
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(item.itemId))).write(
+        RitualItemsCompanion(
+          integrityStatus: Value(result.status),
+          integrityCheckedAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+
+      if (result.status != IntegrityStatus.ok) {
+        issues++;
+
+        await _logIntegrityEvent(
+          personId: personId,
+          item: item,
+          status: result.status,
+          expectedPath: result.expectedPath,
         );
 
-        if (result.status != IntegrityStatus.ok) {
-          issues++;
-
-          await _logIntegrityEvent(
+        if (repairMissingRecordedToEmpty && item.state == ItemState.recorded) {
+          await repo.repairMissingRecordedToEmpty(
             personId: personId,
-            item: item,
-            status: result.status,
-            expectedPath: result.expectedPath,
+            itemId: item.itemId,
           );
+          fixed++;
+          continue;
+        }
+
+        if (repairMissingArchivedToEmpty && item.state == ItemState.archived) {
+          await repo.repairMissingArchivedToEmpty(
+            personId: personId,
+            itemId: item.itemId,
+          );
+          fixed++;
+          continue;
         }
       }
+    }
 
-      await _logSummaryEvent(
-        personId: personId,
-        checked: checked,
-        issues: issues,
-        fixed: fixed,
-        now: now,
-      );
-    });
+    await _logSummaryEvent(
+      personId: personId,
+      checked: checked,
+      issues: issues,
+      fixed: fixed,
+      now: now,
+    );
 
     return IntegritySummary(
       checked: checked,
