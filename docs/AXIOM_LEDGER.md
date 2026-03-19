@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: 6210827
+- Current reference commit: 0f6520d
 
 ## Core Invariants
 - Never zero empty slots
@@ -151,20 +151,21 @@
 - strict slot invariants enforced through repo logic
 - integrity detection and repair flows
 - sleeves v1 domain layer
-- sleeve selector as primary navigation
+- sleeve selector as primary navigation context
 - active and archive filtered by current sleeve
 - last active sleeve persisted and restored
 - fallback to default sleeve after sleeve deletion
 - move between sleeves flow
-- verify pipeline green at commit 6210827
+- first visual foundation pass
+- verify pipeline green at commit 0f6520d
 
 ### This commit purpose
-- introduce a first visual foundation pass
-- make the app feel calmer and more product like
-- improve hierarchy, spacing, card quality, and archive presentation
-- remove permanently visible active and archive tabs
-- introduce a bottom reveal for mode switching
-- keep functional behavior stable while upgrading the surface
+- replace the cheap system style sleeve dropdown
+- introduce a visual sleeve hero selector
+- move sleeve switching into a bottom sheet
+- make active voice tiles more playful and characterful
+- add sleeve theme colors and stronger visual differentiation
+- keep archive calmer and more restrained than active
 
 ## Sleeve Rules
 - Every person has a stable default sleeve
@@ -186,28 +187,31 @@
 - The hidden mode switch must remain discoverable through a visible bottom handle
 - Recording, playing, empty, and normal states should be visually distinct
 - Destructive actions must stay clearly marked and confirmed where required
+- Sleeve switching should feel modern and intentional, not like a classic form control
+- Active tiles can be more playful and expressive than archive rows
 
-## Design Direction v1
-- Dark, calm, minimal interface
-- Stronger visual hierarchy
-- More premium spacing and card proportions
-- Less raw system UI feeling
-- Functional simplicity over decorative effects
-- No heavy animation system yet
-- No complete branding pass yet
+## Design Direction v2
+- Dark, calm, playful premium interface
+- Visual sleeve identity through theme color and icon
+- Sleeve selector presented as a hero control, not a basic input
+- Active voice tiles use softer organic shapes and layered bubble language
+- More depth, shadow, and personality
+- Archive remains simpler and more operational
+- Functional clarity remains more important than decoration
 
 ## Known Constraints
-- Bottom reveal for mode switching is intentionally simple in v1
-- Current mode reveal uses a visible handle and lightweight interaction
-- Gesture system is not yet fully expanded
-- No custom animation architecture yet
-- No full design token layer yet
+- Sleeve themes are currently derived in UI only
+- Theme selection is not yet user configurable
+- Bubble and playful styling is visual only for now
+- No advanced motion system yet
+- No design token layer yet
+- Active and archive bottom reveal remains intentionally simple in v1
 
 ## Next Planned Work
 ### Immediate next layer after this design pass
-- review the new UI in practice
-- refine card states and sleeve header if needed
-- decide whether to continue with design polish or move to alarm foundation
+- review the new sleeve selector and tile language on device
+- decide whether to push design one step further or move back to feature work
+- assess whether per sleeve themes should later become configurable
 
 ### Likely next functional step
 - alarm and scheduling domain foundation
@@ -217,5 +221,5 @@
 ### Later
 - richer alarm behavior
 - notifications or timed playback decision
-- optional sleeve icons and colors
+- optional sleeve theme customization
 - richer reconciliation and repair workflows

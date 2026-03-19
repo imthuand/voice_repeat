@@ -25,8 +25,7 @@ class VoiceButtonsScreen extends StatefulWidget {
   State<VoiceButtonsScreen> createState() => _VoiceButtonsScreenState();
 }
 
-class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
-    with SingleTickerProviderStateMixin {
+class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
   late final RitualRepo repo;
   late final VoiceButtonsController controller;
 
@@ -59,6 +58,51 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
   void dispose() {
     controller.dispose();
     super.dispose();
+  }
+
+  _SleeveThemeData _themeForSleeve(Sleeve sleeve) {
+    const palettes = <_SleeveThemeData>[
+      _SleeveThemeData(
+        primary: Color(0xFFFFB86C),
+        secondary: Color(0xFFFFE0B2),
+        accent: Color(0xFFFF8A3D),
+        icon: Icons.wb_sunny_rounded,
+      ),
+      _SleeveThemeData(
+        primary: Color(0xFF7CC7FF),
+        secondary: Color(0xFFD7F0FF),
+        accent: Color(0xFF2F9BFF),
+        icon: Icons.cloud_rounded,
+      ),
+      _SleeveThemeData(
+        primary: Color(0xFFC5A3FF),
+        secondary: Color(0xFFEADBFF),
+        accent: Color(0xFF8B5DFF),
+        icon: Icons.nights_stay_rounded,
+      ),
+      _SleeveThemeData(
+        primary: Color(0xFF7EE3B1),
+        secondary: Color(0xFFDDF8EA),
+        accent: Color(0xFF29B870),
+        icon: Icons.forest_rounded,
+      ),
+      _SleeveThemeData(
+        primary: Color(0xFFFF9FB0),
+        secondary: Color(0xFFFFE0E6),
+        accent: Color(0xFFFF5B7F),
+        icon: Icons.favorite_rounded,
+      ),
+      _SleeveThemeData(
+        primary: Color(0xFFFFD36E),
+        secondary: Color(0xFFFFF0C5),
+        accent: Color(0xFFFFB300),
+        icon: Icons.star_rounded,
+      ),
+    ];
+
+    final key = '${sleeve.sleeveId}:${sleeve.name}';
+    final hash = key.codeUnits.fold<int>(0, (a, b) => a + b);
+    return palettes[hash % palettes.length];
   }
 
   Future<void> _renameDialog(
@@ -215,12 +259,13 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     final selected = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: const Color(0xFF121418),
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (_) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -239,27 +284,60 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                   'Move to sleeve',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
-              ...candidates.map(
-                (sleeve) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    sleeve.name,
-                    style: const TextStyle(color: Colors.white),
+              const SizedBox(height: 14),
+              ...candidates.map((sleeve) {
+                final theme = _themeForSleeve(sleeve);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(22),
+                    onTap: () => Navigator.pop(context, sleeve.sleeveId),
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.primary.withValues(alpha: 0.28),
+                            theme.accent.withValues(alpha: 0.18),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.06),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            _ThemeOrb(theme: theme, size: 44),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                sleeve.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: Colors.white70,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                  trailing: const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.white54,
-                  ),
-                  onTap: () => Navigator.pop(context, sleeve.sleeveId),
-                ),
-              ),
+                );
+              }),
             ],
           ),
         ),
@@ -446,6 +524,194 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     }
   }
 
+  Future<void> _openSleevePicker(List<Sleeve> sleeves) async {
+    final activeId = controller.activeSleeveId;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF121418),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Choose sleeve',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: () async {
+                        Navigator.pop(sheetContext);
+                        await _createSleeveDialog();
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('New'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: sleeves.map((sleeve) {
+                      final theme = _themeForSleeve(sleeve);
+                      final selected = sleeve.sleeveId == activeId;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(24),
+                          onTap: () async {
+                            Navigator.pop(sheetContext);
+                            await controller.setActiveSleeve(sleeve.sleeveId);
+                          },
+                          child: Ink(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  theme.primary.withValues(
+                                    alpha: selected ? 0.34 : 0.18,
+                                  ),
+                                  theme.accent.withValues(
+                                    alpha: selected ? 0.24 : 0.10,
+                                  ),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: selected
+                                    ? Colors.white.withValues(alpha: 0.22)
+                                    : Colors.white.withValues(alpha: 0.06),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: theme.accent.withValues(
+                                    alpha: selected ? 0.14 : 0.06,
+                                  ),
+                                  blurRadius: 18,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  _ThemeOrb(theme: theme, size: 48),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          sleeve.name,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          sleeve.sleeveId ==
+                                                  SleeveDefaults.defaultId
+                                              ? 'Default sleeve'
+                                              : 'Tap to switch',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.66,
+                                            ),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (selected)
+                                    const Icon(
+                                      Icons.check_circle_rounded,
+                                      color: Colors.white,
+                                    ),
+                                  if (!selected)
+                                    PopupMenuButton<String>(
+                                      color: const Color(0xFF16181D),
+                                      icon: const Icon(
+                                        Icons.more_horiz,
+                                        color: Colors.white70,
+                                      ),
+                                      onSelected: (value) async {
+                                        Navigator.pop(sheetContext);
+                                        if (value == 'rename') {
+                                          await _renameSleeveDialog(sleeve);
+                                        }
+                                        if (value == 'delete') {
+                                          final confirmed =
+                                              await _confirmDeleteSleeveDialog(
+                                                sleeve,
+                                              );
+                                          if (!confirmed) return;
+                                          await controller.deleteActiveSleeve();
+                                        }
+                                      },
+                                      itemBuilder: (_) => [
+                                        if (sleeve.sleeveId !=
+                                            SleeveDefaults.defaultId)
+                                          const PopupMenuItem(
+                                            value: 'rename',
+                                            child: Text('Rename'),
+                                          ),
+                                        if (sleeve.sleeveId !=
+                                            SleeveDefaults.defaultId)
+                                          const PopupMenuItem(
+                                            value: 'delete',
+                                            child: Text('Delete'),
+                                          ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _integrityInfoBanner({
     required List<RitualItem> items,
     required String emptyText,
@@ -509,86 +775,90 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
             ),
     );
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF12151A),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Sleeve',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.45),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
-            ),
+    final theme = _themeForSleeve(activeSleeve);
+    final accentSoft = theme.primary.withValues(alpha: 0.24);
+    final accentStrong = theme.accent.withValues(alpha: 0.22);
+
+    return GestureDetector(
+      onTap: () => _openSleevePicker(sleeves),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              accentSoft,
+              accentStrong,
+              const Color(0xFF12151A),
+            ],
+            stops: const [0.0, 0.45, 1.0],
           ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: activeSleeve.sleeveId,
-                    dropdownColor: const Color(0xFF16181D),
-                    isExpanded: true,
-                    iconEnabledColor: Colors.white70,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: theme.accent.withValues(alpha: 0.10),
+              blurRadius: 22,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            _ThemeOrb(theme: theme, size: 58),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Current sleeve',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.58),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    activeSleeve.name,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      height: 1.0,
                     ),
-                    items: sleeves
-                        .map(
-                          (sleeve) => DropdownMenuItem<String>(
-                            value: sleeve.sleeveId,
-                            child: Text(sleeve.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) async {
-                      if (value == null) return;
-                      await controller.setActiveSleeve(value);
-                    },
                   ),
-                ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Tap to switch or manage sleeves',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.70),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              _HeaderIconButton(
-                tooltip: 'New sleeve',
-                icon: Icons.add,
-                onTap: _createSleeveDialog,
+            ),
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(18),
               ),
-              const SizedBox(width: 8),
-              _HeaderIconButton(
-                tooltip: 'Rename sleeve',
-                icon: Icons.edit_outlined,
-                onTap: activeSleeve.sleeveId == SleeveDefaults.defaultId
-                    ? null
-                    : () => _renameSleeveDialog(activeSleeve),
+              child: const Icon(
+                Icons.unfold_more_rounded,
+                color: Colors.white,
               ),
-              const SizedBox(width: 8),
-              _HeaderIconButton(
-                tooltip: 'Delete sleeve',
-                icon: Icons.delete_outline,
-                onTap: activeSleeve.sleeveId == SleeveDefaults.defaultId
-                    ? null
-                    : () async {
-                        final confirmed =
-                            await _confirmDeleteSleeveDialog(activeSleeve);
-                        if (!confirmed) return;
-                        await controller.deleteActiveSleeve();
-                      },
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -777,7 +1047,20 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                               ),
                               builder: (context, snap) {
                                 final items = snap.data ?? const [];
-                                return _gridActive(context, items);
+                                final sleeve = sleeves.firstWhere(
+                                  (s) => s.sleeveId == currentSleeveId,
+                                  orElse: () => sleeves.isNotEmpty
+                                      ? sleeves.first
+                                      : Sleeve(
+                                          sleeveId: SleeveDefaults.defaultId,
+                                          personId: widget.personId,
+                                          name: SleeveDefaults.defaultName,
+                                          sortOrder: 0,
+                                          createdAt: 0,
+                                          updatedAt: 0,
+                                        ),
+                                );
+                                return _gridActive(context, items, sleeve);
                               },
                             ),
                             StreamBuilder<List<RitualItem>>(
@@ -808,7 +1091,11 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     );
   }
 
-  Widget _gridActive(BuildContext context, List<RitualItem> items) {
+  Widget _gridActive(
+    BuildContext context,
+    List<RitualItem> items,
+    Sleeve sleeve,
+  ) {
     return Column(
       children: [
         _integrityInfoBanner(
@@ -823,15 +1110,16 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
               itemCount: items.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.98,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.92,
               ),
               itemBuilder: (_, i) {
                 final it = items[i];
-                return _ActiveTile(
+                return _PlayfulVoiceTile(
                   item: it,
                   displayIndex: i + 1,
+                  sleeveTheme: _themeForSleeve(sleeve),
                   isRecording: controller.recordingItemId == it.itemId,
                   isPlaying: controller.playingItemId == it.itemId,
                   onIntegrityTap: () => _integrityDialog(context, it),
@@ -920,12 +1208,19 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                 child: Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFF12151A),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(22),
                     border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.18),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: ListTile(
                     contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     title: Text(
                       it.label.isEmpty ? 'Archived item' : it.label,
                       style: const TextStyle(
@@ -1033,42 +1328,56 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
   }
 }
 
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({
-    required this.tooltip,
+class _SleeveThemeData {
+  const _SleeveThemeData({
+    required this.primary,
+    required this.secondary,
+    required this.accent,
     required this.icon,
-    required this.onTap,
   });
 
-  final String tooltip;
+  final Color primary;
+  final Color secondary;
+  final Color accent;
   final IconData icon;
-  final VoidCallback? onTap;
+}
+
+class _ThemeOrb extends StatelessWidget {
+  const _ThemeOrb({
+    required this.theme,
+    required this.size,
+  });
+
+  final _SleeveThemeData theme;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final enabled = onTap != null;
-
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: enabled
-                ? const Color(0xFF1A1E25)
-                : const Color(0xFF12151A),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: enabled ? Colors.white70 : Colors.white24,
-          ),
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          colors: [
+            theme.secondary,
+            theme.primary,
+            theme.accent,
+          ],
+          stops: const [0.0, 0.62, 1.0],
         ),
+        borderRadius: BorderRadius.circular(size),
+        boxShadow: [
+          BoxShadow(
+            color: theme.accent.withValues(alpha: 0.25),
+            blurRadius: 16,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Icon(
+        theme.icon,
+        color: Colors.white,
+        size: size * 0.44,
       ),
     );
   }
@@ -1110,10 +1419,11 @@ class _ModePill extends StatelessWidget {
   }
 }
 
-class _ActiveTile extends StatefulWidget {
-  const _ActiveTile({
+class _PlayfulVoiceTile extends StatefulWidget {
+  const _PlayfulVoiceTile({
     required this.item,
     required this.displayIndex,
+    required this.sleeveTheme,
     required this.isRecording,
     required this.isPlaying,
     required this.onIntegrityTap,
@@ -1128,6 +1438,7 @@ class _ActiveTile extends StatefulWidget {
 
   final RitualItem item;
   final int displayIndex;
+  final _SleeveThemeData sleeveTheme;
   final bool isRecording;
   final bool isPlaying;
   final VoidCallback onIntegrityTap;
@@ -1140,10 +1451,10 @@ class _ActiveTile extends StatefulWidget {
   final Future<void> Function() onDelete;
 
   @override
-  State<_ActiveTile> createState() => _ActiveTileState();
+  State<_PlayfulVoiceTile> createState() => _PlayfulVoiceTileState();
 }
 
-class _ActiveTileState extends State<_ActiveTile> {
+class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
   static const holdThreshold = Duration(milliseconds: 220);
 
   Timer? _timer;
@@ -1168,33 +1479,44 @@ class _ActiveTileState extends State<_ActiveTile> {
   Widget build(BuildContext context) {
     final it = widget.item;
     final isEmpty = it.state == ItemState.empty;
+    final theme = widget.sleeveTheme;
 
     final border = widget.isRecording
         ? Colors.redAccent
         : widget.isPlaying
             ? Colors.lightBlueAccent
             : isEmpty
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white.withValues(alpha: 0.12);
+                ? Colors.white.withValues(alpha: 0.10)
+                : Colors.white.withValues(alpha: 0.16);
 
-    final glow = widget.isRecording
-        ? Colors.redAccent.withValues(alpha: 0.18)
+    final shadow = widget.isRecording
+        ? Colors.redAccent.withValues(alpha: 0.22)
         : widget.isPlaying
-            ? Colors.lightBlueAccent.withValues(alpha: 0.15)
-            : Colors.transparent;
+            ? Colors.lightBlueAccent.withValues(alpha: 0.20)
+            : theme.accent.withValues(alpha: 0.18);
 
     final title =
-        it.label.isEmpty ? 'Button ${widget.displayIndex}' : it.label;
+        it.label.isEmpty ? 'Voice ${widget.displayIndex}' : it.label;
 
-    final status = widget.isRecording
+    final statusText = widget.isRecording
         ? 'Recording'
-        : isEmpty
-            ? 'Hold to record'
-            : widget.isPlaying
-                ? 'Playing'
-                : 'Tap to play';
+        : widget.isPlaying
+            ? 'Playing'
+            : isEmpty
+                ? 'Empty'
+                : 'Ready';
 
-    final footer = '${it.usageCountTotal} plays';
+    final statusColor = widget.isRecording
+        ? Colors.redAccent
+        : widget.isPlaying
+            ? Colors.lightBlueAccent
+            : isEmpty
+                ? Colors.white70
+                : theme.accent;
+
+    final subtitleText = isEmpty
+        ? 'Hold to create'
+        : '${it.usageCountTotal} plays';
 
     return Listener(
       behavior: HitTestBehavior.opaque,
@@ -1247,120 +1569,273 @@ class _ActiveTileState extends State<_ActiveTile> {
         _reset();
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: const Duration(milliseconds: 160),
         curve: Curves.easeOut,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: border, width: 1.4),
-          color: const Color(0xFF12151A),
+          borderRadius: BorderRadius.circular(36),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isEmpty
+                ? [
+                    const Color(0xFF181B21),
+                    const Color(0xFF111318),
+                  ]
+                : [
+                    theme.primary.withValues(alpha: 0.90),
+                    theme.accent.withValues(alpha: 0.88),
+                  ],
+          ),
+          border: Border.all(color: border, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: glow,
-              blurRadius: 18,
+              color: shadow,
+              blurRadius: 24,
               spreadRadius: 1,
+              offset: const Offset(0, 10),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      height: 1.1,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(34),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -24,
+                top: -18,
+                child: _BubbleCloud(
+                  color: Colors.white.withValues(alpha: isEmpty ? 0.04 : 0.14),
+                  size: 104,
                 ),
-                if (it.integrityStatus != RitualRepo.integrityOk)
-                  IconButton(
-                    tooltip: 'Integrity',
-                    onPressed: widget.onIntegrityTap,
-                    icon: const Icon(
-                      Icons.error_outline,
-                      color: Colors.orangeAccent,
-                      size: 20,
+              ),
+              Positioned(
+                left: -18,
+                bottom: -22,
+                child: _BubbleCloud(
+                  color: Colors.white.withValues(alpha: isEmpty ? 0.03 : 0.10),
+                  size: 84,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        _MiniIconBubble(
+                          color: isEmpty
+                              ? Colors.white.withValues(alpha: 0.10)
+                              : Colors.white.withValues(alpha: 0.18),
+                          icon: isEmpty
+                              ? Icons.mic_none_rounded
+                              : widget.isPlaying
+                                  ? Icons.graphic_eq_rounded
+                                  : Icons.chat_bubble_rounded,
+                        ),
+                        const Spacer(),
+                        if (it.integrityStatus != RitualRepo.integrityOk)
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Integrity',
+                            onPressed: widget.onIntegrityTap,
+                            icon: const Icon(
+                              Icons.error_outline,
+                              color: Colors.orangeAccent,
+                              size: 20,
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        PopupMenuButton<String>(
+                          color: const Color(0xFF16181D),
+                          padding: EdgeInsets.zero,
+                          icon: Icon(
+                            Icons.more_horiz_rounded,
+                            color: isEmpty ? Colors.white60 : Colors.white,
+                          ),
+                          onSelected: (v) async {
+                            if (v == 'rename') widget.onRename();
+                            if (v == 'archive') await widget.onArchive();
+                            if (v == 'move') await widget.onMove();
+                            if (v == 'delete') await widget.onDelete();
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(
+                              value: 'rename',
+                              child: Text('Rename'),
+                            ),
+                            PopupMenuItem(
+                              value: 'archive',
+                              enabled: !isEmpty && it.activePath != null,
+                              child: const Text('Archive'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'move',
+                              child: Text('Move to sleeve'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Delete permanently'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                PopupMenuButton<String>(
-                  color: const Color(0xFF16181D),
-                  icon: const Icon(
-                    Icons.more_vert,
-                    color: Colors.white60,
-                    size: 20,
-                  ),
-                  onSelected: (v) async {
-                    if (v == 'rename') widget.onRename();
-                    if (v == 'archive') await widget.onArchive();
-                    if (v == 'move') await widget.onMove();
-                    if (v == 'delete') await widget.onDelete();
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'rename',
-                      child: Text('Rename'),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isEmpty
+                            ? Colors.white.withValues(alpha: 0.10)
+                            : Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        statusText,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
-                    PopupMenuItem(
-                      value: 'archive',
-                      enabled: !isEmpty && it.activePath != null,
-                      child: const Text('Archive'),
+                    const SizedBox(height: 12),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                        height: 1.05,
+                        shadows: isEmpty
+                            ? null
+                            : [
+                                Shadow(
+                                  color: Colors.black.withValues(alpha: 0.14),
+                                  blurRadius: 10,
+                                ),
+                              ],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const PopupMenuItem(
-                      value: 'move',
-                      child: Text('Move to sleeve'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete permanently'),
+                    const SizedBox(height: 8),
+                    Text(
+                      subtitleText,
+                      style: TextStyle(
+                        color: isEmpty
+                            ? Colors.white70
+                            : Colors.white.withValues(alpha: 0.86),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              decoration: BoxDecoration(
-                color: widget.isRecording
-                    ? Colors.redAccent.withValues(alpha: 0.15)
-                    : widget.isPlaying
-                        ? Colors.lightBlueAccent.withValues(alpha: 0.15)
-                        : Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(14),
               ),
-              child: Text(
-                status,
-                style: TextStyle(
-                  color: widget.isRecording
-                      ? Colors.redAccent
-                      : widget.isPlaying
-                          ? Colors.lightBlueAccent
-                          : Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              footer,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.45),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+class _MiniIconBubble extends StatelessWidget {
+  const _MiniIconBubble({
+    required this.color,
+    required this.icon,
+  });
+
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Icon(icon, color: Colors.white, size: 22),
+    );
+  }
+}
+
+class _BubbleCloud extends StatelessWidget {
+  const _BubbleCloud({
+    required this.color,
+    required this.size,
+  });
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size * 0.72,
+      child: CustomPaint(
+        painter: _BubbleCloudPainter(color: color),
+      ),
+    );
+  }
+}
+
+class _BubbleCloudPainter extends CustomPainter {
+  _BubbleCloudPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final path = Path();
+
+    final r1 = Rect.fromCircle(
+      center: Offset(size.width * 0.30, size.height * 0.54),
+      radius: size.height * 0.23,
+    );
+    final r2 = Rect.fromCircle(
+      center: Offset(size.width * 0.52, size.height * 0.42),
+      radius: size.height * 0.28,
+    );
+    final r3 = Rect.fromCircle(
+      center: Offset(size.width * 0.72, size.height * 0.55),
+      radius: size.height * 0.22,
+    );
+    final r4 = Rect.fromLTWH(
+      size.width * 0.20,
+      size.height * 0.46,
+      size.width * 0.60,
+      size.height * 0.26,
+    );
+
+    path.addOval(r1);
+    path.addOval(r2);
+    path.addOval(r3);
+    path.addRRect(
+      RRect.fromRectAndRadius(r4, Radius.circular(size.height * 0.16)),
+    );
+
+    canvas.drawShadow(path, Colors.black.withValues(alpha: 0.08), 6, false);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BubbleCloudPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
