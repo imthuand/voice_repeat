@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: 81bba9b
+- Current reference commit: 6210827
 
 ## Core Invariants
 - Never zero empty slots
@@ -17,6 +17,10 @@
 - Delete removes the slot row and the button disappears
 - Clear keeps the slot row but empties its content
 - Playback and recording operate on files, not memory buffers
+- Sleeve is the primary navigation context
+- Active and Archive are view modes within the current sleeve
+- Last used sleeve is restored on startup
+- If the active sleeve is deleted, the app switches to default sleeve
 
 ## Data Model
 ### schemaVersion
@@ -142,24 +146,31 @@
 
 ## Current Branch Status
 ### Already implemented
+- recording and playback stable
+- archive, restore, delete flows stable
+- strict slot invariants enforced through repo logic
+- integrity detection and repair flows
 - sleeves v1 domain layer
 - sleeve selector as primary navigation
 - active and archive filtered by current sleeve
 - last active sleeve persisted and restored
 - fallback to default sleeve after sleeve deletion
-- integrity, recovery, and UX hardening
+- move between sleeves flow
+- verify pipeline green at commit 6210827
 
 ### This commit purpose
-- allow moving items between sleeves
-- prevent moving to the same sleeve
-- keep move lightweight and explicit through tile menu
-- preserve invariants in both source and target sleeves
+- introduce a first visual foundation pass
+- make the app feel calmer and more product like
+- improve hierarchy, spacing, card quality, and archive presentation
+- remove permanently visible active and archive tabs
+- introduce a bottom reveal for mode switching
+- keep functional behavior stable while upgrading the surface
 
 ## Sleeve Rules
 - Every person has a stable default sleeve
 - New sleeves get one empty slot immediately
 - Default sleeve cannot be deleted
-- A sleeve can only be deleted when all of its items are empty
+- A sleeve can only be deleted when all items are empty
 - Active and archived views are always filtered by current sleeve
 - Integrity checks still run across the whole person scope
 - Last used sleeve is restored on app start when it still exists
@@ -168,12 +179,43 @@
 - A move to the same sleeve is rejected
 - Source and target sleeves must both preserve the empty slot invariant after move
 
+## UX Rules
+- Sleeve remains the main context selector
+- Active and Archive are secondary modes, not constant top level tabs
+- Mode switching can be hidden until intentionally revealed
+- The hidden mode switch must remain discoverable through a visible bottom handle
+- Recording, playing, empty, and normal states should be visually distinct
+- Destructive actions must stay clearly marked and confirmed where required
+
+## Design Direction v1
+- Dark, calm, minimal interface
+- Stronger visual hierarchy
+- More premium spacing and card proportions
+- Less raw system UI feeling
+- Functional simplicity over decorative effects
+- No heavy animation system yet
+- No complete branding pass yet
+
+## Known Constraints
+- Bottom reveal for mode switching is intentionally simple in v1
+- Current mode reveal uses a visible handle and lightweight interaction
+- Gesture system is not yet fully expanded
+- No custom animation architecture yet
+- No full design token layer yet
+
 ## Next Planned Work
-### Next major step
-- sleeve refinement and optional move confirmation
-- optional sleeve reordering
-- optional sleeve icons and colors
+### Immediate next layer after this design pass
+- review the new UI in practice
+- refine card states and sleeve header if needed
+- decide whether to continue with design polish or move to alarm foundation
+
+### Likely next functional step
+- alarm and scheduling domain foundation
+- no background auto playback yet
+- first define model, storage, and UI setup cleanly
 
 ### Later
-- scheduling and alarms
+- richer alarm behavior
+- notifications or timed playback decision
+- optional sleeve icons and colors
 - richer reconciliation and repair workflows

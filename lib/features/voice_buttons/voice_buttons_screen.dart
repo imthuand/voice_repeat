@@ -29,9 +29,10 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     with SingleTickerProviderStateMixin {
   late final RitualRepo repo;
   late final VoiceButtonsController controller;
-  late final TabController tabs;
 
   int _lastUiMessageId = 0;
+  bool _showBottomModeBar = false;
+  int _selectedModeIndex = 0;
 
   @override
   void initState() {
@@ -43,7 +44,6 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
       storage: FileStorage(),
       personId: widget.personId,
     );
-    tabs = TabController(length: 2, vsync: this);
 
     Future.microtask(() async {
       await repo.ensureDefaultPerson();
@@ -57,7 +57,6 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
 
   @override
   void dispose() {
-    tabs.dispose();
     controller.dispose();
     super.dispose();
   }
@@ -72,18 +71,29 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     final label = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Label'),
+        backgroundColor: const Color(0xFF16181D),
+        title: const Text('Label', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: c,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'Zähne putzen'),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Zähne putzen',
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+            filled: true,
+            fillColor: const Color(0xFF1D2026),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, c.text.trim()),
             child: const Text('Save'),
           ),
@@ -106,18 +116,29 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     final name = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('New sleeve'),
+        backgroundColor: const Color(0xFF16181D),
+        title: const Text('New sleeve', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: c,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'Morning'),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Morning',
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+            filled: true,
+            fillColor: const Color(0xFF1D2026),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, c.text.trim()),
             child: const Text('Create'),
           ),
@@ -135,18 +156,30 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     final name = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Rename sleeve'),
+        backgroundColor: const Color(0xFF16181D),
+        title:
+            const Text('Rename sleeve', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: c,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'Morning'),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Morning',
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+            filled: true,
+            fillColor: const Color(0xFF1D2026),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, c.text.trim()),
             child: const Text('Save'),
           ),
@@ -179,18 +212,57 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
       return;
     }
 
-    final selected = await showDialog<String>(
+    final selected = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => SimpleDialog(
-        title: const Text('Move to sleeve'),
-        children: candidates
-            .map(
-              (sleeve) => SimpleDialogOption(
-                onPressed: () => Navigator.pop(context, sleeve.sleeveId),
-                child: Text(sleeve.name),
+      backgroundColor: const Color(0xFF121418),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(99),
+                ),
               ),
-            )
-            .toList(),
+              const SizedBox(height: 16),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Move to sleeve',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              ...candidates.map(
+                (sleeve) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    sleeve.name,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.white54,
+                  ),
+                  onTap: () => Navigator.pop(context, sleeve.sleeveId),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
 
@@ -205,16 +277,21 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete slot permanently'),
+        backgroundColor: const Color(0xFF16181D),
+        title: const Text(
+          'Delete slot permanently',
+          style: TextStyle(color: Colors.white),
+        ),
         content: const Text(
           'This removes the slot and its button completely. This action is destructive.',
+          style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete permanently'),
           ),
@@ -229,16 +306,19 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete sleeve'),
+        backgroundColor: const Color(0xFF16181D),
+        title:
+            const Text('Delete sleeve', style: TextStyle(color: Colors.white)),
         content: Text(
           'Delete sleeve "${sleeve.name}"? This is only allowed when all items in the sleeve are empty.',
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete sleeve'),
           ),
@@ -282,8 +362,12 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
     final action = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(title),
-        content: Text(details.join('\n\n')),
+        backgroundColor: const Color(0xFF16181D),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: Text(
+          details.join('\n\n'),
+          style: const TextStyle(color: Colors.white70),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -370,35 +454,41 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
         .where((e) => e.integrityStatus != RitualRepo.integrityOk)
         .length;
 
-    if (issueCount == 0) {
-      return Container(
-        width: double.infinity,
-        margin: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white10,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white12),
-        ),
-        child: Text(
-          emptyText,
-          style: const TextStyle(color: Colors.white70),
-        ),
-      );
-    }
-
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white24),
+        color: issueCount == 0
+            ? const Color(0xFF12151A)
+            : const Color(0xFF1A1715),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: issueCount == 0
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.orange.withValues(alpha: 0.20),
+        ),
       ),
-      child: Text(
-        '$issueCount integrity issue${issueCount == 1 ? '' : 's'} detected. Prefer repair over delete where possible.',
-        style: const TextStyle(color: Colors.white),
+      child: Row(
+        children: [
+          Icon(
+            issueCount == 0 ? Icons.verified_outlined : Icons.error_outline,
+            color: issueCount == 0 ? Colors.white54 : Colors.orangeAccent,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              issueCount == 0
+                  ? emptyText
+                  : '$issueCount integrity issue${issueCount == 1 ? '' : 's'} detected. Prefer repair over delete where possible.',
+              style: TextStyle(
+                color: issueCount == 0 ? Colors.white70 : Colors.orangeAccent,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -421,64 +511,181 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white12),
+        color: const Color(0xFF12151A),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: activeSleeve.sleeveId,
-                dropdownColor: Colors.black87,
-                isExpanded: true,
-                items: sleeves
-                    .map(
-                      (sleeve) => DropdownMenuItem<String>(
-                        value: sleeve.sleeveId,
-                        child: Text(
-                          sleeve.name,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) async {
-                  if (value == null) return;
-                  await controller.setActiveSleeve(value);
-                },
-              ),
+          Text(
+            'Sleeve',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.45),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
             ),
           ),
-          IconButton(
-            tooltip: 'New sleeve',
-            onPressed: _createSleeveDialog,
-            icon: const Icon(Icons.add, color: Colors.white),
-          ),
-          IconButton(
-            tooltip: 'Rename sleeve',
-            onPressed: activeSleeve.sleeveId == SleeveDefaults.defaultId
-                ? null
-                : () => _renameSleeveDialog(activeSleeve),
-            icon: const Icon(Icons.edit_outlined, color: Colors.white),
-          ),
-          IconButton(
-            tooltip: 'Delete sleeve',
-            onPressed: activeSleeve.sleeveId == SleeveDefaults.defaultId
-                ? null
-                : () async {
-                    final confirmed =
-                        await _confirmDeleteSleeveDialog(activeSleeve);
-                    if (!confirmed) return;
-                    await controller.deleteActiveSleeve();
-                  },
-            icon: const Icon(Icons.delete_outline, color: Colors.white),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: activeSleeve.sleeveId,
+                    dropdownColor: const Color(0xFF16181D),
+                    isExpanded: true,
+                    iconEnabledColor: Colors.white70,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    items: sleeves
+                        .map(
+                          (sleeve) => DropdownMenuItem<String>(
+                            value: sleeve.sleeveId,
+                            child: Text(sleeve.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) async {
+                      if (value == null) return;
+                      await controller.setActiveSleeve(value);
+                    },
+                  ),
+                ),
+              ),
+              _HeaderIconButton(
+                tooltip: 'New sleeve',
+                icon: Icons.add,
+                onTap: _createSleeveDialog,
+              ),
+              const SizedBox(width: 8),
+              _HeaderIconButton(
+                tooltip: 'Rename sleeve',
+                icon: Icons.edit_outlined,
+                onTap: activeSleeve.sleeveId == SleeveDefaults.defaultId
+                    ? null
+                    : () => _renameSleeveDialog(activeSleeve),
+              ),
+              const SizedBox(width: 8),
+              _HeaderIconButton(
+                tooltip: 'Delete sleeve',
+                icon: Icons.delete_outline,
+                onTap: activeSleeve.sleeveId == SleeveDefaults.defaultId
+                    ? null
+                    : () async {
+                        final confirmed =
+                            await _confirmDeleteSleeveDialog(activeSleeve);
+                        if (!confirmed) return;
+                        await controller.deleteActiveSleeve();
+                      },
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _bottomModeReveal() {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onVerticalDragUpdate: (details) {
+                if (details.delta.dy < -2 && !_showBottomModeBar) {
+                  setState(() => _showBottomModeBar = true);
+                } else if (details.delta.dy > 2 && _showBottomModeBar) {
+                  setState(() => _showBottomModeBar = false);
+                }
+              },
+              onTap: () {
+                setState(() => _showBottomModeBar = !_showBottomModeBar);
+              },
+              child: Column(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _showBottomModeBar
+                        ? 'Hide modes'
+                        : (_selectedModeIndex == 0
+                            ? 'Show archive'
+                            : 'Show active'),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.38),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 180),
+              crossFadeState: _showBottomModeBar
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              firstChild: const SizedBox(height: 0),
+              secondChild: Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF12151A),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _ModePill(
+                        text: 'Active',
+                        selected: _selectedModeIndex == 0,
+                        onTap: () {
+                          setState(() {
+                            _selectedModeIndex = 0;
+                            _showBottomModeBar = false;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _ModePill(
+                        text: 'Archive',
+                        selected: _selectedModeIndex == 1,
+                        onTap: () {
+                          setState(() {
+                            _selectedModeIndex = 1;
+                            _showBottomModeBar = false;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -498,20 +705,29 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
         }
 
         return Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: const Color(0xFF0A0C10),
           appBar: AppBar(
-            backgroundColor: Colors.black,
-            title: const Text('Voice Repeat'),
+            backgroundColor: const Color(0xFF0A0C10),
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            title: const Text(
+              'Voice Repeat',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.2,
+              ),
+            ),
             actions: [
-              PopupMenuButton<String>(
+              IconButton(
                 tooltip: 'Integrity actions',
+                onPressed: () => _runIntegrityMenuAction('check'),
                 icon: const Icon(Icons.shield_outlined),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'More integrity actions',
+                icon: const Icon(Icons.more_horiz),
                 onSelected: _runIntegrityMenuAction,
                 itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: 'check',
-                    child: Text('Check only'),
-                  ),
                   PopupMenuItem(
                     value: 'repairRecorded',
                     child: Text('Check and repair active'),
@@ -523,13 +739,6 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                 ],
               ),
             ],
-            bottom: TabBar(
-              controller: tabs,
-              tabs: const [
-                Tab(text: 'Active'),
-                Tab(text: 'Archive'),
-              ],
-            ),
           ),
           body: AnimatedBuilder(
             animation: controller,
@@ -541,42 +750,54 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(msg.text)),
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: const Color(0xFF16181D),
+                      content: Text(msg.text),
+                    ),
                   );
                 });
               }
 
               final currentSleeveId = controller.activeSleeveId;
 
-              return Column(
+              return Stack(
                 children: [
-                  if (sleeves.isNotEmpty) _sleeveSelector(sleeves),
-                  Expanded(
-                    child: TabBarView(
-                      controller: tabs,
-                      children: [
-                        StreamBuilder<List<RitualItem>>(
-                          stream: repo.watchActive(
-                            widget.personId,
-                            sleeveId: currentSleeveId,
-                          ),
-                          builder: (context, snap) {
-                            final items = snap.data ?? const [];
-                            return _gridActive(context, items);
-                          },
+                  Column(
+                    children: [
+                      if (sleeves.isNotEmpty) _sleeveSelector(sleeves),
+                      Expanded(
+                        child: IndexedStack(
+                          index: _selectedModeIndex,
+                          children: [
+                            StreamBuilder<List<RitualItem>>(
+                              stream: repo.watchActive(
+                                widget.personId,
+                                sleeveId: currentSleeveId,
+                              ),
+                              builder: (context, snap) {
+                                final items = snap.data ?? const [];
+                                return _gridActive(context, items);
+                              },
+                            ),
+                            StreamBuilder<List<RitualItem>>(
+                              stream: repo.watchArchived(
+                                widget.personId,
+                                sleeveId: currentSleeveId,
+                              ),
+                              builder: (context, snap) {
+                                final items = snap.data ?? const [];
+                                return _listArchive(context, items);
+                              },
+                            ),
+                          ],
                         ),
-                        StreamBuilder<List<RitualItem>>(
-                          stream: repo.watchArchived(
-                            widget.personId,
-                            sleeveId: currentSleeveId,
-                          ),
-                          builder: (context, snap) {
-                            final items = snap.data ?? const [];
-                            return _listArchive(context, items);
-                          },
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: _bottomModeReveal(),
                   ),
                 ],
               );
@@ -597,14 +818,14 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 90),
             child: GridView.builder(
               itemCount: items.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 14,
                 mainAxisSpacing: 14,
-                childAspectRatio: 1.55,
+                childAspectRatio: 0.98,
               ),
               itemBuilder: (_, i) {
                 final it = items[i];
@@ -662,9 +883,9 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
         ),
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 90),
             itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (_, i) {
               final it = items[i];
               return Dismissible(
@@ -696,63 +917,74 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                     return false;
                   }
                 },
-                child: ListTile(
-                  tileColor: Colors.white10,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF12151A),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
                   ),
-                  title: Text(
-                    it.label.isEmpty ? 'Archived item' : it.label,
-                    style: const TextStyle(color: Colors.white),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    'Used ${it.usageCountTotal} times',
-                    style: const TextStyle(color: Colors.white70),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: 'Move',
-                        onPressed: () => _moveItemDialog(it),
-                        icon: const Icon(
-                          Icons.drive_file_move_outline,
-                          color: Colors.white70,
-                        ),
+                  child: ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    title: Text(
+                      it.label.isEmpty ? 'Archived item' : it.label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
                       ),
-                      if (it.integrityStatus != RitualRepo.integrityOk)
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        'Used ${it.usageCountTotal} times',
+                        style: const TextStyle(color: Colors.white60),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         IconButton(
-                          tooltip: 'Integrity',
-                          onPressed: () => _integrityDialog(context, it),
+                          tooltip: 'Move',
+                          onPressed: () => _moveItemDialog(it),
                           icon: const Icon(
-                            Icons.error_outline,
+                            Icons.drive_file_move_outline,
                             color: Colors.white70,
                           ),
                         ),
-                      IconButton(
-                        onPressed: () async {
-                          final path = it.archivedPath;
-                          if (path == null) return;
+                        if (it.integrityStatus != RitualRepo.integrityOk)
+                          IconButton(
+                            tooltip: 'Integrity',
+                            onPressed: () => _integrityDialog(context, it),
+                            icon: const Icon(
+                              Icons.error_outline,
+                              color: Colors.orangeAccent,
+                            ),
+                          ),
+                        IconButton(
+                          onPressed: () async {
+                            final path = it.archivedPath;
+                            if (path == null) return;
 
-                          final didPlay =
-                              await controller.togglePlay(it.itemId, path);
-                          if (didPlay) {
-                            await repo.markPlayed(
-                              personId: widget.personId,
-                              itemId: it.itemId,
-                            );
-                          }
-                        },
-                        icon: const Icon(
-                          Icons.play_arrow,
-                          color: Colors.white,
+                            final didPlay =
+                                await controller.togglePlay(it.itemId, path);
+                            if (didPlay) {
+                              await repo.markPlayed(
+                                personId: widget.personId,
+                                itemId: it.itemId,
+                              );
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.play_arrow,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -768,8 +1000,8 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
       alignment: left ? Alignment.centerLeft : Alignment.centerRight,
       padding: const EdgeInsets.symmetric(horizontal: 18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white10,
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF1C2129),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -796,6 +1028,83 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                 const SizedBox(width: 10),
                 Icon(icon, color: Colors.white70),
               ],
+      ),
+    );
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: enabled
+                ? const Color(0xFF1A1E25)
+                : const Color(0xFF12151A),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: enabled ? Colors.white70 : Colors.white24,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ModePill extends StatelessWidget {
+  const _ModePill({
+    required this.text,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String text;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          text,
+          style: TextStyle(
+            color: selected ? Colors.black : Colors.white70,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }
@@ -865,8 +1174,14 @@ class _ActiveTileState extends State<_ActiveTile> {
         : widget.isPlaying
             ? Colors.lightBlueAccent
             : isEmpty
-                ? Colors.white24
-                : Colors.white;
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.white.withValues(alpha: 0.12);
+
+    final glow = widget.isRecording
+        ? Colors.redAccent.withValues(alpha: 0.18)
+        : widget.isPlaying
+            ? Colors.lightBlueAccent.withValues(alpha: 0.15)
+            : Colors.transparent;
 
     final title =
         it.label.isEmpty ? 'Button ${widget.displayIndex}' : it.label;
@@ -879,7 +1194,7 @@ class _ActiveTileState extends State<_ActiveTile> {
                 ? 'Playing'
                 : 'Tap to play';
 
-    final footer = '$status • ${it.usageCountTotal} plays';
+    final footer = '${it.usageCountTotal} plays';
 
     return Listener(
       behavior: HitTestBehavior.opaque,
@@ -931,15 +1246,23 @@ class _ActiveTileState extends State<_ActiveTile> {
 
         _reset();
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: border, width: 2.5),
-          color: Colors.black,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: border, width: 1.4),
+          color: const Color(0xFF12151A),
+          boxShadow: [
+            BoxShadow(
+              color: glow,
+              blurRadius: 18,
+              spreadRadius: 1,
+            ),
+          ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -949,11 +1272,11 @@ class _ActiveTileState extends State<_ActiveTile> {
                     title,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      height: 1.0,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      height: 1.1,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -963,14 +1286,15 @@ class _ActiveTileState extends State<_ActiveTile> {
                     onPressed: widget.onIntegrityTap,
                     icon: const Icon(
                       Icons.error_outline,
-                      color: Colors.white70,
+                      color: Colors.orangeAccent,
                       size: 20,
                     ),
                   ),
                 PopupMenuButton<String>(
+                  color: const Color(0xFF16181D),
                   icon: const Icon(
                     Icons.more_vert,
-                    color: Colors.white70,
+                    color: Colors.white60,
                     size: 20,
                   ),
                   onSelected: (v) async {
@@ -1001,15 +1325,38 @@ class _ActiveTileState extends State<_ActiveTile> {
                 ),
               ],
             ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: widget.isRecording
+                    ? Colors.redAccent.withValues(alpha: 0.15)
+                    : widget.isPlaying
+                        ? Colors.lightBlueAccent.withValues(alpha: 0.15)
+                        : Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  color: widget.isRecording
+                      ? Colors.redAccent
+                      : widget.isPlaying
+                          ? Colors.lightBlueAccent
+                          : Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             Text(
               footer,
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 11,
-                height: 1.0,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.45),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
