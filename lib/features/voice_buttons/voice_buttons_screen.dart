@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -155,6 +156,49 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
 
     if (name == null || name.isEmpty) return;
     await controller.renameActiveSleeve(name);
+  }
+
+  Future<void> _moveItemDialog(RitualItem item) async {
+    final sleeves = await (widget.db.select(widget.db.sleeves)
+          ..where((t) => t.personId.equals(widget.personId))
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.sortOrder),
+            (t) => OrderingTerm(expression: t.name),
+          ]))
+        .get();
+
+    if (!mounted) return;
+
+    final candidates =
+        sleeves.where((s) => s.sleeveId != item.sleeveId).toList();
+
+    if (candidates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No other sleeve available.')),
+      );
+      return;
+    }
+
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (_) => SimpleDialog(
+        title: const Text('Move to sleeve'),
+        children: candidates
+            .map(
+              (sleeve) => SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, sleeve.sleeveId),
+                child: Text(sleeve.name),
+              ),
+            )
+            .toList(),
+      ),
+    );
+
+    if (selected == null) return;
+    await controller.moveItemToSleeve(
+      itemId: item.itemId,
+      targetSleeveId: selected,
+    );
   }
 
   Future<bool> _confirmDeleteDialog() async {
@@ -590,6 +634,7 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                     if (path == null) return;
                     await controller.archive(it.itemId, path);
                   },
+                  onMove: () => _moveItemDialog(it),
                   onDelete: () async {
                     final confirmed = await _confirmDeleteDialog();
                     if (!confirmed) return;
@@ -671,6 +716,14 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen>
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      IconButton(
+                        tooltip: 'Move',
+                        onPressed: () => _moveItemDialog(it),
+                        icon: const Icon(
+                          Icons.drive_file_move_outline,
+                          color: Colors.white70,
+                        ),
+                      ),
                       if (it.integrityStatus != RitualRepo.integrityOk)
                         IconButton(
                           tooltip: 'Integrity',
@@ -760,6 +813,7 @@ class _ActiveTile extends StatefulWidget {
     required this.onTap,
     required this.onRename,
     required this.onArchive,
+    required this.onMove,
     required this.onDelete,
   });
 
@@ -773,6 +827,7 @@ class _ActiveTile extends StatefulWidget {
   final Future<void> Function() onTap;
   final VoidCallback onRename;
   final Future<void> Function() onArchive;
+  final Future<void> Function() onMove;
   final Future<void> Function() onDelete;
 
   @override
@@ -921,6 +976,7 @@ class _ActiveTileState extends State<_ActiveTile> {
                   onSelected: (v) async {
                     if (v == 'rename') widget.onRename();
                     if (v == 'archive') await widget.onArchive();
+                    if (v == 'move') await widget.onMove();
                     if (v == 'delete') await widget.onDelete();
                   },
                   itemBuilder: (_) => [
@@ -932,6 +988,10 @@ class _ActiveTileState extends State<_ActiveTile> {
                       value: 'archive',
                       enabled: !isEmpty && it.activePath != null,
                       child: const Text('Archive'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'move',
+                      child: Text('Move to sleeve'),
                     ),
                     const PopupMenuItem(
                       value: 'delete',

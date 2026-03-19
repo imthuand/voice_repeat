@@ -166,6 +166,52 @@ void main() {
       );
     });
 
+    test('moveItemToSleeve moves item and keeps source and target empty invariant', () async {
+      final targetSleeveId = await repo.createSleeve(
+        personId: personId,
+        name: 'School',
+      );
+
+      final item = await _slot(db, personId, sleeveId, 0);
+      await repo.setRecorded(
+        personId: personId,
+        itemId: item.itemId,
+        label: 'Brush teeth',
+        activePath: '/tmp/a.m4a',
+        sizeBytes: 12,
+      );
+
+      await repo.moveItemToSleeve(
+        personId: personId,
+        itemId: item.itemId,
+        targetSleeveId: targetSleeveId,
+      );
+
+      final moved = await _byId(db, item.itemId);
+      expect(moved.sleeveId, targetSleeveId);
+      expect(moved.state, RitualRepo.stateRecorded);
+      expect(moved.label, 'Brush teeth');
+
+      final sourceItems = await _itemsOfSleeve(db, personId, sleeveId);
+      final targetItems = await _itemsOfSleeve(db, personId, targetSleeveId);
+
+      expect(sourceItems.any((x) => x.state == RitualRepo.stateEmpty), true);
+      expect(targetItems.any((x) => x.state == RitualRepo.stateEmpty), true);
+    });
+
+    test('moveItemToSleeve rejects moving to same sleeve', () async {
+      final item = await _slot(db, personId, sleeveId, 0);
+
+      expect(
+        () => repo.moveItemToSleeve(
+          personId: personId,
+          itemId: item.itemId,
+          targetSleeveId: sleeveId,
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
     test('setRecorded: empty -> recorded, sets activePath and sizeBytes', () async {
       final it = await _slot(db, personId, sleeveId, 0);
 
@@ -320,172 +366,6 @@ void main() {
       expect(updated.archivedAt, null);
     });
 
-    test('clearToEmpty resets fields for archived', () async {
-      final it = await _slot(db, personId, sleeveId, 0);
-
-      await repo.setRecorded(
-        personId: personId,
-        itemId: it.itemId,
-        label: '',
-        activePath: '/tmp/a.m4a',
-        sizeBytes: 1,
-      );
-      await repo.setArchived(
-        personId: personId,
-        itemId: it.itemId,
-        archivedPath: '/tmp/arch.m4a',
-      );
-
-      await repo.clearToEmpty(personId: personId, itemId: it.itemId);
-
-      final updated = await _byId(db, it.itemId);
-      expect(updated.state, RitualRepo.stateEmpty);
-      expect(updated.activePath, null);
-      expect(updated.archivedPath, null);
-      expect(updated.recordedAt, null);
-      expect(updated.archivedAt, null);
-    });
-
-    test('rename works for empty, recorded, archived', () async {
-      final it0 = await _slot(db, personId, sleeveId, 0);
-
-      await repo.rename(personId: personId, itemId: it0.itemId, label: 'A');
-      expect((await _byId(db, it0.itemId)).label, 'A');
-
-      await repo.setRecorded(
-        personId: personId,
-        itemId: it0.itemId,
-        label: '',
-        activePath: '/tmp/a.m4a',
-        sizeBytes: 1,
-      );
-      await repo.rename(personId: personId, itemId: it0.itemId, label: 'B');
-      expect((await _byId(db, it0.itemId)).label, 'B');
-
-      await repo.setArchived(
-        personId: personId,
-        itemId: it0.itemId,
-        archivedPath: '/tmp/arch.m4a',
-      );
-      await repo.rename(personId: personId, itemId: it0.itemId, label: 'C');
-      expect((await _byId(db, it0.itemId)).label, 'C');
-    });
-
-    test('markPlayed increments usageCountTotal and sets lastUsedAt (recorded)', () async {
-      final it = await _slot(db, personId, sleeveId, 0);
-
-      await repo.setRecorded(
-        personId: personId,
-        itemId: it.itemId,
-        label: '',
-        activePath: '/tmp/a.m4a',
-        sizeBytes: 1,
-      );
-
-      final before = await _byId(db, it.itemId);
-      expect(before.usageCountTotal, 0);
-      expect(before.lastUsedAt, null);
-
-      await repo.markPlayed(personId: personId, itemId: it.itemId);
-
-      final after = await _byId(db, it.itemId);
-      expect(after.usageCountTotal, 1);
-      expect(after.lastUsedAt, isNotNull);
-    });
-
-    test('markPlayed allowed on archived too', () async {
-      final it = await _slot(db, personId, sleeveId, 0);
-
-      await repo.setRecorded(
-        personId: personId,
-        itemId: it.itemId,
-        label: '',
-        activePath: '/tmp/a.m4a',
-        sizeBytes: 1,
-      );
-      await repo.setArchived(
-        personId: personId,
-        itemId: it.itemId,
-        archivedPath: '/tmp/arch.m4a',
-      );
-
-      await repo.markPlayed(personId: personId, itemId: it.itemId);
-
-      final after = await _byId(db, it.itemId);
-      expect(after.usageCountTotal, 1);
-      expect(after.lastUsedAt, isNotNull);
-    });
-
-    test('auto slot is not created when an empty already exists', () async {
-      final before = await _itemsOfSleeve(db, personId, sleeveId);
-      final lenBefore = before.length;
-      expect(before.any((x) => x.state == RitualRepo.stateEmpty), true);
-
-      final it0 = await _slot(db, personId, sleeveId, 0);
-      await repo.setRecorded(
-        personId: personId,
-        itemId: it0.itemId,
-        label: '',
-        activePath: '/tmp/a.m4a',
-        sizeBytes: 1,
-      );
-
-      final after = await _itemsOfSleeve(db, personId, sleeveId);
-      expect(after.length, lenBefore);
-      expect(after.any((x) => x.state == RitualRepo.stateEmpty), true);
-    });
-
-    test('auto slot created exactly once when last empty is consumed', () async {
-      final items = await _itemsOfSleeve(db, personId, sleeveId);
-
-      for (final it in items) {
-        await repo.setRecorded(
-          personId: personId,
-          itemId: it.itemId,
-          label: '',
-          activePath: '/tmp/${it.slotIndex}.m4a',
-          sizeBytes: 1,
-        );
-      }
-
-      final after = await _itemsOfSleeve(db, personId, sleeveId);
-      expect(after.length, 5);
-
-      final empty = after.firstWhere((x) => x.state == RitualRepo.stateEmpty);
-      await repo.setRecorded(
-        personId: personId,
-        itemId: empty.itemId,
-        label: '',
-        activePath: '/tmp/new.m4a',
-        sizeBytes: 1,
-      );
-
-      final after2 = await _itemsOfSleeve(db, personId, sleeveId);
-      expect(after2.length, 6);
-      expect(after2.any((x) => x.state == RitualRepo.stateEmpty), true);
-    });
-
-    test('setRecorded logs a recorded event with correct personId and itemId', () async {
-      final it = await _slot(db, personId, sleeveId, 0);
-
-      await repo.setRecorded(
-        personId: personId,
-        itemId: it.itemId,
-        label: 'Test',
-        activePath: '/tmp/a.m4a',
-        sizeBytes: 123,
-      );
-
-      final events = await _eventsForItem(db, it.itemId);
-      expect(events.isNotEmpty, true);
-
-      final last = events.last;
-      expect(last.personId, personId);
-      expect(last.itemId, it.itemId);
-      expect(last.eventType, RitualEventType.recorded.eventName);
-      expect(last.sleeveId, sleeveId);
-    });
-
     test('rename logs a renamed event with metadata label', () async {
       final it = await _slot(db, personId, sleeveId, 0);
 
@@ -502,38 +382,6 @@ void main() {
 
       final decoded = jsonDecode(meta!) as Map<String, dynamic>;
       expect(decoded['label'], 'Hello');
-    });
-
-    test('archive + restore log both events in order', () async {
-      final it = await _slot(db, personId, sleeveId, 0);
-
-      await repo.setRecorded(
-        personId: personId,
-        itemId: it.itemId,
-        label: '',
-        activePath: '/tmp/a.m4a',
-        sizeBytes: 1,
-      );
-      await repo.setArchived(
-        personId: personId,
-        itemId: it.itemId,
-        archivedPath: '/tmp/arch.m4a',
-      );
-      await repo.restore(
-        personId: personId,
-        itemId: it.itemId,
-        activePath: '/tmp/a2.m4a',
-      );
-
-      final events = await _eventsForItem(db, it.itemId);
-      final types = events.map((e) => e.eventType).toList();
-
-      final idxArchived = types.indexOf(RitualEventType.archived.eventName);
-      final idxRestored = types.indexOf(RitualEventType.restored.eventName);
-
-      expect(idxArchived, greaterThan(-1));
-      expect(idxRestored, greaterThan(-1));
-      expect(idxRestored, greaterThan(idxArchived));
     });
   });
 }

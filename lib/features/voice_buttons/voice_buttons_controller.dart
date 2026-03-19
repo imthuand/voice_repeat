@@ -113,6 +113,23 @@ class VoiceButtonsController extends ChangeNotifier {
     }
   }
 
+  Future<void> moveItemToSleeve({
+    required String itemId,
+    required String targetSleeveId,
+  }) async {
+    try {
+      await _stopPlayingIfAny();
+      await repo.moveItemToSleeve(
+        personId: personId,
+        itemId: itemId,
+        targetSleeveId: targetSleeveId,
+      );
+      _emitUi('Item moved to sleeve.');
+    } catch (e) {
+      _emitUi(e.toString().replaceFirst('Bad state: ', ''));
+    }
+  }
+
   String _summaryText(
     String prefix,
     IntegritySummary summary,

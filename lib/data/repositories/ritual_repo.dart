@@ -388,6 +388,59 @@ class RitualRepo {
     });
   }
 
+  Future<void> moveItemToSleeve({
+    required String personId,
+    required String itemId,
+    required String targetSleeveId,
+  }) async {
+    await db.transaction(() async {
+      final item = await _getByIdTx(itemId);
+
+      if (item.personId != personId) {
+        throw StateError('Item does not belong to this person');
+      }
+
+      if (item.sleeveId == targetSleeveId) {
+        throw StateError('Item is already in this sleeve');
+      }
+
+      final targetSleeve = await (db.select(db.sleeves)
+            ..where((t) =>
+                t.personId.equals(personId) &
+                t.sleeveId.equals(targetSleeveId)))
+          .getSingleOrNull();
+
+      if (targetSleeve == null) {
+        throw StateError('Target sleeve does not exist');
+      }
+
+      final sourceSleeveId = item.sleeveId;
+      final now = _now();
+
+      await (db.update(db.ritualItems)..where((t) => t.itemId.equals(itemId)))
+          .write(
+        RitualItemsCompanion(
+          sleeveId: Value(targetSleeveId),
+          updatedAt: Value(now),
+        ),
+      );
+
+      await logEvent(
+        personId: personId,
+        itemId: itemId,
+        type: RitualEventType.renamed,
+        metadata: {
+          'moveAction': 'move_to_sleeve',
+          'fromSleeveId': sourceSleeveId,
+          'toSleeveId': targetSleeveId,
+        },
+      );
+
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: sourceSleeveId);
+      await _ensureAtLeastOneEmptyTx(personId, sleeveId: targetSleeveId);
+    });
+  }
+
   Stream<List<RitualItem>> watchActive(
     String personId, {
     required String sleeveId,

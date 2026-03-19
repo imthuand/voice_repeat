@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: 465248c
+- Current reference commit: 81bba9b
 
 ## Core Invariants
 - Never zero empty slots
@@ -92,6 +92,7 @@
 - createSleeve()
 - renameSleeve()
 - deleteSleeve()
+- moveItemToSleeve()
 - watchActive()
 - watchArchived()
 - rename()
@@ -111,6 +112,7 @@
 - createSleeve()
 - renameActiveSleeve()
 - deleteActiveSleeve()
+- moveItemToSleeve()
 - startHold()
 - stopHold()
 - togglePlay()
@@ -139,19 +141,19 @@
 - Verification script: tool/verify.bat
 
 ## Current Branch Status
-### Already implemented before this step
-- schemaVersion 4 sleeves foundation
-- sleeve aware queries
-- sleeve creation, rename, delete
-- integrity and recovery hardening
-- global integrity repair actions
+### Already implemented
+- sleeves v1 domain layer
+- sleeve selector as primary navigation
+- active and archive filtered by current sleeve
+- last active sleeve persisted and restored
+- fallback to default sleeve after sleeve deletion
+- integrity, recovery, and UX hardening
 
 ### This commit purpose
-- Make sleeve selection the primary navigation control
-- Persist the last used sleeve per person
-- Restore last used sleeve on startup
-- Fall back to default sleeve after sleeve deletion
-- Remove hidden horizontal sleeve overflow
+- allow moving items between sleeves
+- prevent moving to the same sleeve
+- keep move lightweight and explicit through tile menu
+- preserve invariants in both source and target sleeves
 
 ## Sleeve Rules
 - Every person has a stable default sleeve
@@ -162,13 +164,16 @@
 - Integrity checks still run across the whole person scope
 - Last used sleeve is restored on app start when it still exists
 - If the active sleeve is deleted, the app switches to default sleeve and persists that change
+- A moved item keeps its content, state, metadata, and integrity status
+- A move to the same sleeve is rejected
+- Source and target sleeves must both preserve the empty slot invariant after move
 
 ## Next Planned Work
 ### Next major step
-- Move items between sleeves
-- Optional sleeve reordering
-- Optional sleeve icons and colors
+- sleeve refinement and optional move confirmation
+- optional sleeve reordering
+- optional sleeve icons and colors
 
 ### Later
-- Scheduling and alarms
+- scheduling and alarms
 - richer reconciliation and repair workflows
