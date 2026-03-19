@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: 62055e5
+- Current reference commit: aee16ee
 
 ## Core Invariants
 - Never zero empty slots
@@ -158,14 +158,15 @@
 - move between sleeves flow
 - first visual foundation pass
 - design pass 2 for sleeve selector and voice tiles
-- verify pipeline green at commit 62055e5
+- dark popup readability fix and calm pass
+- verify pipeline green at commit aee16ee
 
 ### This commit purpose
-- fix unreadable popup menu text in dark menus
-- standardize popup menu contrast across integrity, sleeve, and tile actions
-- slightly calm the visual language after design pass 2
-- compact the sleeve hero a bit
-- reduce visual overload in active tiles while preserving the playful direction
+- replace the remaining system like tile menu feel with rounded bottom action sheets
+- align tile actions with the broader bottom sheet interaction language
+- align sleeve secondary actions with the same action sheet style
+- make the overall UI feel more adult, unified, and premium playful
+- slightly reduce visual intensity in hero and tiles without losing character
 
 ## Sleeve Rules
 - Every person has a stable default sleeve
@@ -189,14 +190,15 @@
 - Destructive actions must stay clearly marked and confirmed where required
 - Sleeve switching should feel modern and intentional, not like a classic form control
 - Active tiles can be more playful and expressive than archive rows
-- Popup menus must always preserve high readability on dark surfaces
+- Contextual actions should use rounded action sheets rather than system like square popups where possible
+- Action surfaces should feel like one coherent family
 
-## Design Direction v2.1
+## Design Direction v2.2
 - Dark, calm, playful premium interface
 - Visual sleeve identity through theme color and icon
 - Sleeve selector presented as a hero control, not a basic input
 - Active voice tiles use softer organic shapes and layered bubble language
-- More depth, shadow, and personality
+- Action surfaces are increasingly unified through rounded bottom sheets
 - Archive remains simpler and more operational
 - Functional clarity remains more important than decoration
 - Reduce raw system UI feeling without overloading the screen
@@ -208,12 +210,13 @@
 - No advanced motion system yet
 - No design token layer yet
 - Active and archive bottom reveal remains intentionally simple in v1
+- Tile actions now use action sheets, while some app level actions still use popup menus
 
 ## Next Planned Work
 ### Immediate next layer after this pass
-- review popup readability and overall balance on device
-- decide whether to continue with visual refinement or return to feature work
-- assess whether tile themes should later become configurable
+- review whether tile action sheets feel better than popup menus
+- assess if the sleeve hero should be reduced one more step
+- evaluate whether active tiles now sit in the right balance between fun and premium
 
 ### Likely next functional step
 - alarm and scheduling domain foundation
