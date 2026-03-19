@@ -33,6 +33,12 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
   bool _showBottomModeBar = false;
   int _selectedModeIndex = 0;
 
+  static const _menuTextStyle = TextStyle(
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +64,25 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
   void dispose() {
     controller.dispose();
     super.dispose();
+  }
+
+  PopupMenuItem<String> _menuItem(
+    String value,
+    String text, {
+    bool enabled = true,
+  }) {
+    return PopupMenuItem<String>(
+      value: value,
+      enabled: enabled,
+      child: Text(
+        text,
+        style: enabled
+            ? _menuTextStyle
+            : _menuTextStyle.copyWith(
+                color: Colors.white.withValues(alpha: 0.35),
+              ),
+      ),
+    );
   }
 
   _SleeveThemeData _themeForSleeve(Sleeve sleeve) {
@@ -301,8 +326,8 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            theme.primary.withValues(alpha: 0.28),
-                            theme.accent.withValues(alpha: 0.18),
+                            theme.primary.withValues(alpha: 0.24),
+                            theme.accent.withValues(alpha: 0.16),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(22),
@@ -595,23 +620,23 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
                                 end: Alignment.bottomRight,
                                 colors: [
                                   theme.primary.withValues(
-                                    alpha: selected ? 0.34 : 0.18,
+                                    alpha: selected ? 0.28 : 0.16,
                                   ),
                                   theme.accent.withValues(
-                                    alpha: selected ? 0.24 : 0.10,
+                                    alpha: selected ? 0.20 : 0.09,
                                   ),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
                                 color: selected
-                                    ? Colors.white.withValues(alpha: 0.22)
+                                    ? Colors.white.withValues(alpha: 0.20)
                                     : Colors.white.withValues(alpha: 0.06),
                               ),
                               boxShadow: [
                                 BoxShadow(
                                   color: theme.accent.withValues(
-                                    alpha: selected ? 0.14 : 0.06,
+                                    alpha: selected ? 0.12 : 0.05,
                                   ),
                                   blurRadius: 18,
                                   spreadRadius: 1,
@@ -662,6 +687,7 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
                                   if (!selected)
                                     PopupMenuButton<String>(
                                       color: const Color(0xFF16181D),
+                                      surfaceTintColor: Colors.transparent,
                                       icon: const Icon(
                                         Icons.more_horiz,
                                         color: Colors.white70,
@@ -683,16 +709,10 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
                                       itemBuilder: (_) => [
                                         if (sleeve.sleeveId !=
                                             SleeveDefaults.defaultId)
-                                          const PopupMenuItem(
-                                            value: 'rename',
-                                            child: Text('Rename'),
-                                          ),
+                                          _menuItem('rename', 'Rename'),
                                         if (sleeve.sleeveId !=
                                             SleeveDefaults.defaultId)
-                                          const PopupMenuItem(
-                                            value: 'delete',
-                                            child: Text('Delete'),
-                                          ),
+                                          _menuItem('delete', 'Delete'),
                                       ],
                                     ),
                                 ],
@@ -776,15 +796,15 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
     );
 
     final theme = _themeForSleeve(activeSleeve);
-    final accentSoft = theme.primary.withValues(alpha: 0.24);
-    final accentStrong = theme.accent.withValues(alpha: 0.22);
+    final accentSoft = theme.primary.withValues(alpha: 0.20);
+    final accentStrong = theme.accent.withValues(alpha: 0.16);
 
     return GestureDetector(
       onTap: () => _openSleevePicker(sleeves),
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -794,21 +814,21 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
               accentStrong,
               const Color(0xFF12151A),
             ],
-            stops: const [0.0, 0.45, 1.0],
+            stops: const [0.0, 0.38, 1.0],
           ),
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(26),
           border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           boxShadow: [
             BoxShadow(
-              color: theme.accent.withValues(alpha: 0.10),
-              blurRadius: 22,
+              color: theme.accent.withValues(alpha: 0.08),
+              blurRadius: 20,
               spreadRadius: 1,
             ),
           ],
         ),
         child: Row(
           children: [
-            _ThemeOrb(theme: theme, size: 58),
+            _ThemeOrb(theme: theme, size: 52),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -818,26 +838,26 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
                     'Current sleeve',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.58),
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.3,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   Text(
                     activeSleeve.name,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.w800,
                       height: 1.0,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 5),
                   Text(
                     'Tap to switch or manage sleeves',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.70),
+                      color: Colors.white.withValues(alpha: 0.68),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -846,11 +866,11 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
               ),
             ),
             Container(
-              width: 46,
-              height: 46,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: const Icon(
                 Icons.unfold_more_rounded,
@@ -962,55 +982,55 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<Sleeve>>(
-      stream: repo.watchSleeves(widget.personId),
-      builder: (context, sleeveSnap) {
-        final sleeves = sleeveSnap.data ?? const <Sleeve>[];
-
-        if (sleeves.isNotEmpty &&
-            !sleeves.any((s) => s.sleeveId == controller.activeSleeveId)) {
-          WidgetsBinding.instance.addPostFrameCallback((_) async {
-            await controller.setActiveSleeve(SleeveDefaults.defaultId);
-          });
-        }
-
-        return Scaffold(
-          backgroundColor: const Color(0xFF0A0C10),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF0A0C10),
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            title: const Text(
-              'Voice Repeat',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-              ),
-            ),
-            actions: [
-              IconButton(
-                tooltip: 'Integrity actions',
-                onPressed: () => _runIntegrityMenuAction('check'),
-                icon: const Icon(Icons.shield_outlined),
-              ),
-              PopupMenuButton<String>(
-                tooltip: 'More integrity actions',
-                icon: const Icon(Icons.more_horiz),
-                onSelected: _runIntegrityMenuAction,
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: 'repairRecorded',
-                    child: Text('Check and repair active'),
-                  ),
-                  PopupMenuItem(
-                    value: 'repairAll',
-                    child: Text('Check and repair all'),
-                  ),
-                ],
-              ),
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0C10),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0A0C10),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: const Text(
+          'Voice Repeat',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.2,
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Integrity actions',
+            onPressed: () => _runIntegrityMenuAction('check'),
+            icon: const Icon(Icons.shield_outlined),
+          ),
+          PopupMenuButton<String>(
+            color: const Color(0xFF16181D),
+            surfaceTintColor: Colors.transparent,
+            tooltip: 'More integrity actions',
+            icon: const Icon(Icons.more_horiz),
+            onSelected: _runIntegrityMenuAction,
+            itemBuilder: (_) => [
+              _menuItem('repairRecorded', 'Check and repair active'),
+              _menuItem('repairAll', 'Check and repair all'),
             ],
           ),
-          body: AnimatedBuilder(
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(0),
+          child: const SizedBox.shrink(),
+        ),
+      ),
+      body: StreamBuilder<List<Sleeve>>(
+        stream: repo.watchSleeves(widget.personId),
+        builder: (context, sleeveSnap) {
+          final sleeves = sleeveSnap.data ?? const <Sleeve>[];
+
+          if (sleeves.isNotEmpty &&
+              !sleeves.any((s) => s.sleeveId == controller.activeSleeveId)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              await controller.setActiveSleeve(SleeveDefaults.defaultId);
+            });
+          }
+
+          return AnimatedBuilder(
             animation: controller,
             builder: (_, __) {
               final msg = controller.uiMessage;
@@ -1085,9 +1105,9 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
                 ],
               );
             },
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -1112,7 +1132,7 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                childAspectRatio: 0.92,
+                childAspectRatio: 0.95,
               ),
               itemBuilder: (_, i) {
                 final it = items[i];
@@ -1120,6 +1140,7 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
                   item: it,
                   displayIndex: i + 1,
                   sleeveTheme: _themeForSleeve(sleeve),
+                  menuItemBuilder: _menuItem,
                   isRecording: controller.recordingItemId == it.itemId,
                   isPlaying: controller.playingItemId == it.itemId,
                   onIntegrityTap: () => _integrityDialog(context, it),
@@ -1368,8 +1389,8 @@ class _ThemeOrb extends StatelessWidget {
         borderRadius: BorderRadius.circular(size),
         boxShadow: [
           BoxShadow(
-            color: theme.accent.withValues(alpha: 0.25),
-            blurRadius: 16,
+            color: theme.accent.withValues(alpha: 0.22),
+            blurRadius: 14,
             spreadRadius: 1,
           ),
         ],
@@ -1424,6 +1445,7 @@ class _PlayfulVoiceTile extends StatefulWidget {
     required this.item,
     required this.displayIndex,
     required this.sleeveTheme,
+    required this.menuItemBuilder,
     required this.isRecording,
     required this.isPlaying,
     required this.onIntegrityTap,
@@ -1439,6 +1461,11 @@ class _PlayfulVoiceTile extends StatefulWidget {
   final RitualItem item;
   final int displayIndex;
   final _SleeveThemeData sleeveTheme;
+  final PopupMenuItem<String> Function(
+    String value,
+    String text, {
+    bool enabled,
+  }) menuItemBuilder;
   final bool isRecording;
   final bool isPlaying;
   final VoidCallback onIntegrityTap;
@@ -1490,10 +1517,10 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
                 : Colors.white.withValues(alpha: 0.16);
 
     final shadow = widget.isRecording
-        ? Colors.redAccent.withValues(alpha: 0.22)
+        ? Colors.redAccent.withValues(alpha: 0.20)
         : widget.isPlaying
-            ? Colors.lightBlueAccent.withValues(alpha: 0.20)
-            : theme.accent.withValues(alpha: 0.18);
+            ? Colors.lightBlueAccent.withValues(alpha: 0.18)
+            : theme.accent.withValues(alpha: 0.14);
 
     final title =
         it.label.isEmpty ? 'Voice ${widget.displayIndex}' : it.label;
@@ -1572,7 +1599,7 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
         duration: const Duration(milliseconds: 160),
         curve: Curves.easeOut,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(36),
+          borderRadius: BorderRadius.circular(34),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -1582,43 +1609,43 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
                     const Color(0xFF111318),
                   ]
                 : [
-                    theme.primary.withValues(alpha: 0.90),
-                    theme.accent.withValues(alpha: 0.88),
+                    theme.primary.withValues(alpha: 0.86),
+                    theme.accent.withValues(alpha: 0.82),
                   ],
           ),
-          border: Border.all(color: border, width: 1.5),
+          border: Border.all(color: border, width: 1.4),
           boxShadow: [
             BoxShadow(
               color: shadow,
-              blurRadius: 24,
+              blurRadius: 20,
               spreadRadius: 1,
-              offset: const Offset(0, 10),
+              offset: const Offset(0, 8),
             ),
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(34),
+          borderRadius: BorderRadius.circular(32),
           child: Stack(
             children: [
               Positioned(
-                right: -24,
-                top: -18,
+                right: -20,
+                top: -14,
                 child: _BubbleCloud(
-                  color: Colors.white.withValues(alpha: isEmpty ? 0.04 : 0.14),
-                  size: 104,
+                  color: Colors.white.withValues(alpha: isEmpty ? 0.03 : 0.11),
+                  size: 90,
                 ),
               ),
               Positioned(
-                left: -18,
-                bottom: -22,
+                left: -14,
+                bottom: -18,
                 child: _BubbleCloud(
-                  color: Colors.white.withValues(alpha: isEmpty ? 0.03 : 0.10),
-                  size: 84,
+                  color: Colors.white.withValues(alpha: isEmpty ? 0.02 : 0.08),
+                  size: 70,
                 ),
               ),
               Padding(
@@ -1654,10 +1681,11 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
                         const SizedBox(width: 8),
                         PopupMenuButton<String>(
                           color: const Color(0xFF16181D),
+                          surfaceTintColor: Colors.transparent,
                           padding: EdgeInsets.zero,
                           icon: Icon(
                             Icons.more_horiz_rounded,
-                            color: isEmpty ? Colors.white60 : Colors.white,
+                            color: isEmpty ? Colors.white70 : Colors.white,
                           ),
                           onSelected: (v) async {
                             if (v == 'rename') widget.onRename();
@@ -1666,23 +1694,14 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
                             if (v == 'delete') await widget.onDelete();
                           },
                           itemBuilder: (_) => [
-                            const PopupMenuItem(
-                              value: 'rename',
-                              child: Text('Rename'),
-                            ),
-                            PopupMenuItem(
-                              value: 'archive',
+                            widget.menuItemBuilder('rename', 'Rename'),
+                            widget.menuItemBuilder(
+                              'archive',
+                              'Archive',
                               enabled: !isEmpty && it.activePath != null,
-                              child: const Text('Archive'),
                             ),
-                            const PopupMenuItem(
-                              value: 'move',
-                              child: Text('Move to sleeve'),
-                            ),
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: Text('Delete permanently'),
-                            ),
+                            widget.menuItemBuilder('move', 'Move to sleeve'),
+                            widget.menuItemBuilder('delete', 'Delete permanently'),
                           ],
                         ),
                       ],
@@ -1714,14 +1733,14 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
-                        fontSize: 18,
+                        fontSize: 17,
                         height: 1.05,
                         shadows: isEmpty
                             ? null
                             : [
                                 Shadow(
-                                  color: Colors.black.withValues(alpha: 0.14),
-                                  blurRadius: 10,
+                                  color: Colors.black.withValues(alpha: 0.10),
+                                  blurRadius: 8,
                                 ),
                               ],
                       ),

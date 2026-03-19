@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: 0f6520d
+- Current reference commit: 62055e5
 
 ## Core Invariants
 - Never zero empty slots
@@ -157,15 +157,15 @@
 - fallback to default sleeve after sleeve deletion
 - move between sleeves flow
 - first visual foundation pass
-- verify pipeline green at commit 0f6520d
+- design pass 2 for sleeve selector and voice tiles
+- verify pipeline green at commit 62055e5
 
 ### This commit purpose
-- replace the cheap system style sleeve dropdown
-- introduce a visual sleeve hero selector
-- move sleeve switching into a bottom sheet
-- make active voice tiles more playful and characterful
-- add sleeve theme colors and stronger visual differentiation
-- keep archive calmer and more restrained than active
+- fix unreadable popup menu text in dark menus
+- standardize popup menu contrast across integrity, sleeve, and tile actions
+- slightly calm the visual language after design pass 2
+- compact the sleeve hero a bit
+- reduce visual overload in active tiles while preserving the playful direction
 
 ## Sleeve Rules
 - Every person has a stable default sleeve
@@ -189,8 +189,9 @@
 - Destructive actions must stay clearly marked and confirmed where required
 - Sleeve switching should feel modern and intentional, not like a classic form control
 - Active tiles can be more playful and expressive than archive rows
+- Popup menus must always preserve high readability on dark surfaces
 
-## Design Direction v2
+## Design Direction v2.1
 - Dark, calm, playful premium interface
 - Visual sleeve identity through theme color and icon
 - Sleeve selector presented as a hero control, not a basic input
@@ -198,6 +199,7 @@
 - More depth, shadow, and personality
 - Archive remains simpler and more operational
 - Functional clarity remains more important than decoration
+- Reduce raw system UI feeling without overloading the screen
 
 ## Known Constraints
 - Sleeve themes are currently derived in UI only
@@ -208,10 +210,10 @@
 - Active and archive bottom reveal remains intentionally simple in v1
 
 ## Next Planned Work
-### Immediate next layer after this design pass
-- review the new sleeve selector and tile language on device
-- decide whether to push design one step further or move back to feature work
-- assess whether per sleeve themes should later become configurable
+### Immediate next layer after this pass
+- review popup readability and overall balance on device
+- decide whether to continue with visual refinement or return to feature work
+- assess whether tile themes should later become configurable
 
 ### Likely next functional step
 - alarm and scheduling domain foundation
