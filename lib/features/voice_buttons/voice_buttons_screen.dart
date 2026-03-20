@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../domain/constants.dart';
 import '../../data/db/app_db.dart';
+import '../../data/repositories/alarm_repo.dart';
 import '../../data/repositories/ritual_repo.dart';
 import '../../infrastructure/audio_service.dart';
 import '../../infrastructure/file_storage.dart';
@@ -27,6 +28,7 @@ class VoiceButtonsScreen extends StatefulWidget {
 
 class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
   late final RitualRepo repo;
+  late final AlarmRepo alarmRepo;
   late final VoiceButtonsController controller;
 
   int _lastUiMessageId = 0;
@@ -37,8 +39,10 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
   void initState() {
     super.initState();
     repo = RitualRepo(widget.db);
+    alarmRepo = AlarmRepo(widget.db);
     controller = VoiceButtonsController(
       repo: repo,
+      alarmRepo: alarmRepo,
       audio: AudioService(),
       storage: FileStorage(),
       personId: widget.personId,
@@ -345,7 +349,8 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
     );
 
     if (selected == null) return;
-    await controller.moveItemToSleeve(
+    await repo.moveItemToSleeve(
+      personId: widget.personId,
       itemId: item.itemId,
       targetSleeveId: selected,
     );
@@ -407,106 +412,6 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
     return result ?? false;
   }
 
-  Future<void> _integrityDialog(BuildContext context, RitualItem it) async {
-    final status = it.integrityStatus;
-    final title =
-        status == RitualRepo.integrityOk ? 'Integrity OK' : 'Integrity issue';
-
-    final details = <String>[];
-    details.add('Status: $status');
-    details.add('State: ${it.state}');
-
-    if (it.activePath != null && it.activePath!.isNotEmpty) {
-      details.add('Active file: ${it.activePath}');
-    }
-
-    if (it.archivedPath != null && it.archivedPath!.isNotEmpty) {
-      details.add('Archived file: ${it.archivedPath}');
-    }
-
-    if (it.integrityCheckedAt != null) {
-      details.add(
-        'Checked: ${DateTime.fromMillisecondsSinceEpoch(it.integrityCheckedAt!).toLocal()}',
-      );
-    }
-
-    final canRepairRecorded =
-        status != RitualRepo.integrityOk &&
-        it.state == RitualRepo.stateRecorded;
-    final canRepairArchived =
-        status != RitualRepo.integrityOk &&
-        it.state == RitualRepo.stateArchived;
-
-    final action = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF16181D),
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        content: Text(
-          details.join('\n\n'),
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'check'),
-            child: const Text('Run check again'),
-          ),
-          if (canRepairRecorded)
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'repairRecorded'),
-              child: const Text('Repair active item to empty'),
-            ),
-          if (canRepairArchived)
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'repairArchived'),
-              child: const Text('Repair archived item to empty'),
-            ),
-          if (status != RitualRepo.integrityOk)
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'delete'),
-              child: const Text('Delete slot permanently'),
-            ),
-        ],
-      ),
-    );
-
-    if (action == 'check') {
-      await controller.runIntegrityCheck();
-      return;
-    }
-
-    if (action == 'repairRecorded') {
-      await controller.repairRecordedIssueToEmpty(it.itemId);
-      return;
-    }
-
-    if (action == 'repairArchived') {
-      await controller.repairArchivedIssueToEmpty(it.itemId);
-      return;
-    }
-
-    if (action == 'delete') {
-      final confirmed = await _confirmDeleteDialog();
-      if (!confirmed) return;
-
-      if (it.state == RitualRepo.stateArchived) {
-        await controller.deleteArchived(
-          it.itemId,
-          archivedPath: it.archivedPath,
-        );
-      } else {
-        await controller.deleteActive(
-          it.itemId,
-          activePath: it.activePath,
-        );
-      }
-    }
-  }
-
   Future<void> _runIntegrityMenuAction(String action) async {
     if (action == 'check') {
       await controller.runIntegrityCheck();
@@ -524,9 +429,244 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
     }
   }
 
+  Future<void> _showAlarmEditor({
+    required RitualItem item,
+    RitualSchedule? existing,
+  }) async {
+    var enabled = existing?.enabled ?? true;
+    var hour = existing?.hour ?? 7;
+    var minute = existing?.minute ?? 30;
+    var selectedDays = <int>{
+      ...AlarmWeekday.ordered.where(
+        (d) => AlarmWeekday.contains(existing?.weekdayMask ?? 0, d),
+      ),
+    };
+
+    if (selectedDays.isEmpty) {
+      selectedDays = {
+        AlarmWeekday.monday,
+        AlarmWeekday.tuesday,
+        AlarmWeekday.wednesday,
+        AlarmWeekday.thursday,
+        AlarmWeekday.friday,
+      };
+    }
+
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF121418),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final label =
+                item.label.isEmpty ? 'Voice ${item.slotIndex + 1}' : item.label;
+
+            Future<void> pickTime() async {
+              final now = TimeOfDay(hour: hour, minute: minute);
+              final picked = await showTimePicker(
+                context: context,
+                initialTime: now,
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: const ColorScheme.dark(),
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+
+              if (picked == null) return;
+
+              setModalState(() {
+                hour = picked.hour;
+                minute = picked.minute;
+              });
+            }
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  18,
+                  12,
+                  18,
+                  22 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: const Icon(
+                            Icons.alarm_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Alarm',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                label,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.70),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: enabled,
+                          onChanged: (value) {
+                            setModalState(() => enabled = value);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    _AlarmTimeCard(
+                      timeText: alarmRepo.formatTime(hour, minute),
+                      onTap: pickTime,
+                    ),
+                    const SizedBox(height: 14),
+                    _AlarmPresetRow(
+                      currentMask: AlarmWeekday.maskOf(selectedDays),
+                      onDaily: () {
+                        setModalState(() {
+                          selectedDays = {...AlarmWeekday.ordered};
+                        });
+                      },
+                      onWeekdays: () {
+                        setModalState(() {
+                          selectedDays = {
+                            AlarmWeekday.monday,
+                            AlarmWeekday.tuesday,
+                            AlarmWeekday.wednesday,
+                            AlarmWeekday.thursday,
+                            AlarmWeekday.friday,
+                          };
+                        });
+                      },
+                      onWeekend: () {
+                        setModalState(() {
+                          selectedDays = {
+                            AlarmWeekday.saturday,
+                            AlarmWeekday.sunday,
+                          };
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: AlarmWeekday.ordered.map((day) {
+                        final active = selectedDays.contains(day);
+                        return FilterChip(
+                          selected: active,
+                          onSelected: (value) {
+                            setModalState(() {
+                              if (value) {
+                                selectedDays.add(day);
+                              } else if (selectedDays.length > 1) {
+                                selectedDays.remove(day);
+                              }
+                            });
+                          },
+                          label: Text(
+                            AlarmWeekday.weekdayShortLabels[day] ?? '?',
+                          ),
+                          selectedColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.06),
+                          labelStyle: TextStyle(
+                            color: active ? Colors.black : Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          checkmarkColor: Colors.black,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.08),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 18),
+                    if (existing != null)
+                      _ActionSheetButton(
+                        icon: Icons.delete_outline,
+                        label: 'Remove alarm',
+                        isDestructive: true,
+                        onTap: () => Navigator.pop(context, 'delete'),
+                      ),
+                    if (existing != null) const SizedBox(height: 10),
+                    _ActionSheetButton(
+                      icon: Icons.save_outlined,
+                      label: 'Save alarm',
+                      onTap: () => Navigator.pop(context, 'save'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (result == 'delete') {
+      await controller.deleteAlarmSchedule(item.itemId);
+      return;
+    }
+
+    if (result == 'save') {
+      await controller.saveAlarmSchedule(
+        itemId: item.itemId,
+        label: item.label,
+        enabled: enabled,
+        hour: hour,
+        minute: minute,
+        weekdayMask: AlarmWeekday.maskOf(selectedDays),
+      );
+    }
+  }
+
   Future<void> _showTileActionSheet({
     required RitualItem item,
     required bool isEmpty,
+    required RitualSchedule? schedule,
     required Future<void> Function() onRename,
     required Future<void> Function() onMove,
     required Future<void> Function() onArchive,
@@ -570,6 +710,12 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
               ),
               const SizedBox(height: 14),
               _ActionSheetButton(
+                icon: Icons.alarm_rounded,
+                label: schedule == null ? 'Add alarm' : 'Edit alarm',
+                onTap: () => Navigator.pop(context, 'alarm'),
+              ),
+              const SizedBox(height: 10),
+              _ActionSheetButton(
                 icon: Icons.edit_outlined,
                 label: 'Rename',
                 onTap: () => Navigator.pop(context, 'rename'),
@@ -600,6 +746,9 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
       ),
     );
 
+    if (action == 'alarm') {
+      await _showAlarmEditor(item: item, existing: schedule);
+    }
     if (action == 'rename') await onRename();
     if (action == 'move') await onMove();
     if (action == 'archive') await onArchive();
@@ -1123,17 +1272,17 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
             tooltip: 'More integrity actions',
             icon: const Icon(Icons.more_horiz),
             onSelected: _runIntegrityMenuAction,
-            itemBuilder: (_) => [
+            itemBuilder: (_) => const [
               PopupMenuItem(
                 value: 'repairRecorded',
-                child: const Text(
+                child: Text(
                   'Check and repair active',
                   style: TextStyle(color: Colors.white),
                 ),
               ),
               PopupMenuItem(
                 value: 'repairAll',
-                child: const Text(
+                child: Text(
                   'Check and repair all',
                   style: TextStyle(color: Colors.white),
                 ),
@@ -1260,52 +1409,73 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
               ),
               itemBuilder: (_, i) {
                 final it = items[i];
-                return _PlayfulVoiceTile(
-                  item: it,
-                  displayIndex: i + 1,
-                  sleeveTheme: _themeForSleeve(sleeve),
-                  isRecording: controller.recordingItemId == it.itemId,
-                  isPlaying: controller.playingItemId == it.itemId,
-                  onIntegrityTap: () => _integrityDialog(context, it),
-                  onOpenActions: () async {
-                    final isEmpty = it.state == ItemState.empty;
-                    await _showTileActionSheet(
+                return StreamBuilder<RitualSchedule?>(
+                  stream: alarmRepo.watchScheduleForItem(it.itemId),
+                  builder: (context, scheduleSnap) {
+                    final schedule = scheduleSnap.data;
+                    return _PlayfulVoiceTile(
                       item: it,
-                      isEmpty: isEmpty,
-                      onRename: () async {
-                        await _renameDialog(context, it.itemId, it.label);
-                      },
-                      onMove: () async {
-                        await _moveItemDialog(it);
-                      },
-                      onArchive: () async {
-                        final path = it.activePath;
-                        if (path == null) return;
-                        await controller.archive(it.itemId, path);
-                      },
-                      onDelete: () async {
-                        final confirmed = await _confirmDeleteDialog();
-                        if (!confirmed) return;
-                        await controller.deleteActive(
-                          it.itemId,
-                          activePath: it.activePath,
+                      displayIndex: i + 1,
+                      sleeveTheme: _themeForSleeve(sleeve),
+                      scheduleSummary: schedule == null
+                          ? null
+                          : alarmRepo.describeSchedule(schedule),
+                      hasAlarm: schedule != null,
+                      alarmEnabled: schedule?.enabled ?? false,
+                      isRecording: controller.recordingItemId == it.itemId,
+                      isPlaying: controller.playingItemId == it.itemId,
+                      onIntegrityTap: () {},
+                      onAlarmTap: () async {
+                        await _showAlarmEditor(
+                          item: it,
+                          existing: schedule,
                         );
                       },
-                    );
-                  },
-                  onHoldStart: () => controller.startHold(it.itemId),
-                  onHoldEnd: () => controller.stopHold(it.itemId),
-                  onTap: () async {
-                    final path = it.activePath;
-                    if (path == null) return;
+                      onOpenActions: () async {
+                        final isEmpty = it.state == ItemState.empty;
+                        await _showTileActionSheet(
+                          item: it,
+                          isEmpty: isEmpty,
+                          schedule: schedule,
+                          onRename: () async {
+                            await _renameDialog(context, it.itemId, it.label);
+                          },
+                          onMove: () async {
+                            await _moveItemDialog(it);
+                          },
+                          onArchive: () async {
+                            final path = it.activePath;
+                            if (path == null) return;
+                            await controller.archive(it.itemId, path);
+                          },
+                          onDelete: () async {
+                            final confirmed = await _confirmDeleteDialog();
+                            if (!confirmed) return;
+                            await controller.deleteActive(
+                              it.itemId,
+                              activePath: it.activePath,
+                            );
+                          },
+                        );
+                      },
+                      onHoldStart: () => controller.startHold(it.itemId),
+                      onHoldEnd: () => controller.stopHold(it.itemId),
+                      onTap: () async {
+                        final path = it.activePath;
+                        if (path == null) return;
 
-                    final didPlay = await controller.togglePlay(it.itemId, path);
-                    if (didPlay) {
-                      await repo.markPlayed(
-                        personId: widget.personId,
-                        itemId: it.itemId,
-                      );
-                    }
+                        final didPlay = await controller.togglePlay(
+                          it.itemId,
+                          path,
+                        );
+                        if (didPlay) {
+                          await repo.markPlayed(
+                            personId: widget.personId,
+                            itemId: it.itemId,
+                          );
+                        }
+                      },
+                    );
                   },
                 );
               },
@@ -1405,15 +1575,6 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
                             color: Colors.white70,
                           ),
                         ),
-                        if (it.integrityStatus != RitualRepo.integrityOk)
-                          IconButton(
-                            tooltip: 'Integrity',
-                            onPressed: () => _integrityDialog(context, it),
-                            icon: const Icon(
-                              Icons.error_outline,
-                              color: Colors.orangeAccent,
-                            ),
-                          ),
                         IconButton(
                           onPressed: () async {
                             final path = it.archivedPath;
@@ -1640,14 +1801,178 @@ class _ActionSheetButton extends StatelessWidget {
   }
 }
 
+class _AlarmTimeCard extends StatelessWidget {
+  const _AlarmTimeCard({
+    required this.timeText,
+    required this.onTap,
+  });
+
+  final String timeText;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: onTap,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.06),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(
+                  Icons.schedule_rounded,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  timeText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.edit_outlined,
+                color: Colors.white70,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AlarmPresetRow extends StatelessWidget {
+  const _AlarmPresetRow({
+    required this.currentMask,
+    required this.onDaily,
+    required this.onWeekdays,
+    required this.onWeekend,
+  });
+
+  final int currentMask;
+  final VoidCallback onDaily;
+  final VoidCallback onWeekdays;
+  final VoidCallback onWeekend;
+
+  @override
+  Widget build(BuildContext context) {
+    final allMask = AlarmWeekday.maskOf(AlarmWeekday.ordered);
+    final weekdaysMask = AlarmWeekday.maskOf(const [
+      AlarmWeekday.monday,
+      AlarmWeekday.tuesday,
+      AlarmWeekday.wednesday,
+      AlarmWeekday.thursday,
+      AlarmWeekday.friday,
+    ]);
+    final weekendMask = AlarmWeekday.maskOf(const [
+      AlarmWeekday.saturday,
+      AlarmWeekday.sunday,
+    ]);
+
+    return Row(
+      children: [
+        Expanded(
+          child: _PresetChip(
+            text: 'Daily',
+            selected: currentMask == allMask,
+            onTap: onDaily,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _PresetChip(
+            text: 'Weekdays',
+            selected: currentMask == weekdaysMask,
+            onTap: onWeekdays,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _PresetChip(
+            text: 'Weekend',
+            selected: currentMask == weekendMask,
+            onTap: onWeekend,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({
+    required this.text,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String text;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: selected
+              ? Colors.white
+              : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.06),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: selected ? Colors.black : Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PlayfulVoiceTile extends StatefulWidget {
   const _PlayfulVoiceTile({
     required this.item,
     required this.displayIndex,
     required this.sleeveTheme,
+    required this.hasAlarm,
+    required this.alarmEnabled,
+    required this.scheduleSummary,
     required this.isRecording,
     required this.isPlaying,
     required this.onIntegrityTap,
+    required this.onAlarmTap,
     required this.onOpenActions,
     required this.onHoldStart,
     required this.onHoldEnd,
@@ -1657,9 +1982,13 @@ class _PlayfulVoiceTile extends StatefulWidget {
   final RitualItem item;
   final int displayIndex;
   final _SleeveThemeData sleeveTheme;
+  final bool hasAlarm;
+  final bool alarmEnabled;
+  final String? scheduleSummary;
   final bool isRecording;
   final bool isPlaying;
   final VoidCallback onIntegrityTap;
+  final Future<void> Function() onAlarmTap;
   final Future<void> Function() onOpenActions;
   final Future<void> Function() onHoldStart;
   final Future<void> Function() onHoldEnd;
@@ -1729,9 +2058,9 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
                 ? Colors.white70
                 : theme.accent;
 
-    final subtitleText = isEmpty
-        ? 'Hold to create'
-        : '${it.usageCountTotal} plays';
+    final subtitleText = widget.hasAlarm
+        ? widget.scheduleSummary!
+        : (isEmpty ? 'Hold to create' : '${it.usageCountTotal} plays');
 
     return Listener(
       behavior: HitTestBehavior.opaque,
@@ -1854,18 +2183,35 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
                                   : Icons.chat_bubble_rounded,
                         ),
                         const Spacer(),
-                        if (it.integrityStatus != RitualRepo.integrityOk)
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            tooltip: 'Integrity',
-                            onPressed: widget.onIntegrityTap,
-                            icon: const Icon(
-                              Icons.error_outline,
-                              color: Colors.orangeAccent,
-                              size: 20,
+                        InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: widget.onAlarmTap,
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: widget.hasAlarm
+                                  ? Colors.white.withValues(alpha: 0.18)
+                                  : Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(16),
+                              border: widget.hasAlarm
+                                  ? Border.all(
+                                      color: Colors.white.withValues(alpha: 0.18),
+                                    )
+                                  : null,
+                            ),
+                            child: Icon(
+                              widget.hasAlarm
+                                  ? Icons.alarm_rounded
+                                  : Icons.alarm_add_rounded,
+                              color: widget.hasAlarm
+                                  ? (widget.alarmEnabled
+                                      ? Colors.white
+                                      : Colors.white70)
+                                  : Colors.white70,
                             ),
                           ),
+                        ),
                         const SizedBox(width: 8),
                         InkWell(
                           borderRadius: BorderRadius.circular(16),
@@ -1938,6 +2284,8 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

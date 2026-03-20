@@ -2248,6 +2248,656 @@ class RitualEventsCompanion extends UpdateCompanion<RitualEvent> {
   }
 }
 
+class $RitualSchedulesTable extends RitualSchedules
+    with TableInfo<$RitualSchedulesTable, RitualSchedule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RitualSchedulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _scheduleIdMeta =
+      const VerificationMeta('scheduleId');
+  @override
+  late final GeneratedColumn<String> scheduleId = GeneratedColumn<String>(
+      'schedule_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
+      'item_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _personIdMeta =
+      const VerificationMeta('personId');
+  @override
+  late final GeneratedColumn<String> personId = GeneratedColumn<String>(
+      'person_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(AlarmScheduleKind.weeklyMask));
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+      'label', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _enabledMeta =
+      const VerificationMeta('enabled');
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+      'enabled', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("enabled" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _hourMeta = const VerificationMeta('hour');
+  @override
+  late final GeneratedColumn<int> hour = GeneratedColumn<int>(
+      'hour', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _minuteMeta = const VerificationMeta('minute');
+  @override
+  late final GeneratedColumn<int> minute = GeneratedColumn<int>(
+      'minute', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _weekdayMaskMeta =
+      const VerificationMeta('weekdayMask');
+  @override
+  late final GeneratedColumn<int> weekdayMask = GeneratedColumn<int>(
+      'weekday_mask', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _lastTriggeredAtMeta =
+      const VerificationMeta('lastTriggeredAt');
+  @override
+  late final GeneratedColumn<int> lastTriggeredAt = GeneratedColumn<int>(
+      'last_triggered_at', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _nextTriggerAtMeta =
+      const VerificationMeta('nextTriggerAt');
+  @override
+  late final GeneratedColumn<int> nextTriggerAt = GeneratedColumn<int>(
+      'next_trigger_at', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        scheduleId,
+        itemId,
+        personId,
+        kind,
+        label,
+        enabled,
+        hour,
+        minute,
+        weekdayMask,
+        createdAt,
+        updatedAt,
+        lastTriggeredAt,
+        nextTriggerAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'ritual_schedules';
+  @override
+  VerificationContext validateIntegrity(Insertable<RitualSchedule> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('schedule_id')) {
+      context.handle(
+          _scheduleIdMeta,
+          scheduleId.isAcceptableOrUnknown(
+              data['schedule_id']!, _scheduleIdMeta));
+    } else if (isInserting) {
+      context.missing(_scheduleIdMeta);
+    }
+    if (data.containsKey('item_id')) {
+      context.handle(_itemIdMeta,
+          itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta));
+    } else if (isInserting) {
+      context.missing(_itemIdMeta);
+    }
+    if (data.containsKey('person_id')) {
+      context.handle(_personIdMeta,
+          personId.isAcceptableOrUnknown(data['person_id']!, _personIdMeta));
+    } else if (isInserting) {
+      context.missing(_personIdMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+          _labelMeta, label.isAcceptableOrUnknown(data['label']!, _labelMeta));
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(_enabledMeta,
+          enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta));
+    }
+    if (data.containsKey('hour')) {
+      context.handle(
+          _hourMeta, hour.isAcceptableOrUnknown(data['hour']!, _hourMeta));
+    } else if (isInserting) {
+      context.missing(_hourMeta);
+    }
+    if (data.containsKey('minute')) {
+      context.handle(_minuteMeta,
+          minute.isAcceptableOrUnknown(data['minute']!, _minuteMeta));
+    } else if (isInserting) {
+      context.missing(_minuteMeta);
+    }
+    if (data.containsKey('weekday_mask')) {
+      context.handle(
+          _weekdayMaskMeta,
+          weekdayMask.isAcceptableOrUnknown(
+              data['weekday_mask']!, _weekdayMaskMeta));
+    } else if (isInserting) {
+      context.missing(_weekdayMaskMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('last_triggered_at')) {
+      context.handle(
+          _lastTriggeredAtMeta,
+          lastTriggeredAt.isAcceptableOrUnknown(
+              data['last_triggered_at']!, _lastTriggeredAtMeta));
+    }
+    if (data.containsKey('next_trigger_at')) {
+      context.handle(
+          _nextTriggerAtMeta,
+          nextTriggerAt.isAcceptableOrUnknown(
+              data['next_trigger_at']!, _nextTriggerAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {scheduleId};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {itemId},
+      ];
+  @override
+  RitualSchedule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RitualSchedule(
+      scheduleId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}schedule_id'])!,
+      itemId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}item_id'])!,
+      personId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}person_id'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      label: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}label'])!,
+      enabled: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}enabled'])!,
+      hour: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}hour'])!,
+      minute: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}minute'])!,
+      weekdayMask: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}weekday_mask'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
+      lastTriggeredAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}last_triggered_at']),
+      nextTriggerAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}next_trigger_at']),
+    );
+  }
+
+  @override
+  $RitualSchedulesTable createAlias(String alias) {
+    return $RitualSchedulesTable(attachedDatabase, alias);
+  }
+}
+
+class RitualSchedule extends DataClass implements Insertable<RitualSchedule> {
+  final String scheduleId;
+  final String itemId;
+  final String personId;
+  final String kind;
+  final String label;
+  final bool enabled;
+  final int hour;
+  final int minute;
+  final int weekdayMask;
+  final int createdAt;
+  final int updatedAt;
+  final int? lastTriggeredAt;
+  final int? nextTriggerAt;
+  const RitualSchedule(
+      {required this.scheduleId,
+      required this.itemId,
+      required this.personId,
+      required this.kind,
+      required this.label,
+      required this.enabled,
+      required this.hour,
+      required this.minute,
+      required this.weekdayMask,
+      required this.createdAt,
+      required this.updatedAt,
+      this.lastTriggeredAt,
+      this.nextTriggerAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['schedule_id'] = Variable<String>(scheduleId);
+    map['item_id'] = Variable<String>(itemId);
+    map['person_id'] = Variable<String>(personId);
+    map['kind'] = Variable<String>(kind);
+    map['label'] = Variable<String>(label);
+    map['enabled'] = Variable<bool>(enabled);
+    map['hour'] = Variable<int>(hour);
+    map['minute'] = Variable<int>(minute);
+    map['weekday_mask'] = Variable<int>(weekdayMask);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    if (!nullToAbsent || lastTriggeredAt != null) {
+      map['last_triggered_at'] = Variable<int>(lastTriggeredAt);
+    }
+    if (!nullToAbsent || nextTriggerAt != null) {
+      map['next_trigger_at'] = Variable<int>(nextTriggerAt);
+    }
+    return map;
+  }
+
+  RitualSchedulesCompanion toCompanion(bool nullToAbsent) {
+    return RitualSchedulesCompanion(
+      scheduleId: Value(scheduleId),
+      itemId: Value(itemId),
+      personId: Value(personId),
+      kind: Value(kind),
+      label: Value(label),
+      enabled: Value(enabled),
+      hour: Value(hour),
+      minute: Value(minute),
+      weekdayMask: Value(weekdayMask),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      lastTriggeredAt: lastTriggeredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastTriggeredAt),
+      nextTriggerAt: nextTriggerAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextTriggerAt),
+    );
+  }
+
+  factory RitualSchedule.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RitualSchedule(
+      scheduleId: serializer.fromJson<String>(json['scheduleId']),
+      itemId: serializer.fromJson<String>(json['itemId']),
+      personId: serializer.fromJson<String>(json['personId']),
+      kind: serializer.fromJson<String>(json['kind']),
+      label: serializer.fromJson<String>(json['label']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+      hour: serializer.fromJson<int>(json['hour']),
+      minute: serializer.fromJson<int>(json['minute']),
+      weekdayMask: serializer.fromJson<int>(json['weekdayMask']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      lastTriggeredAt: serializer.fromJson<int?>(json['lastTriggeredAt']),
+      nextTriggerAt: serializer.fromJson<int?>(json['nextTriggerAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'scheduleId': serializer.toJson<String>(scheduleId),
+      'itemId': serializer.toJson<String>(itemId),
+      'personId': serializer.toJson<String>(personId),
+      'kind': serializer.toJson<String>(kind),
+      'label': serializer.toJson<String>(label),
+      'enabled': serializer.toJson<bool>(enabled),
+      'hour': serializer.toJson<int>(hour),
+      'minute': serializer.toJson<int>(minute),
+      'weekdayMask': serializer.toJson<int>(weekdayMask),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'lastTriggeredAt': serializer.toJson<int?>(lastTriggeredAt),
+      'nextTriggerAt': serializer.toJson<int?>(nextTriggerAt),
+    };
+  }
+
+  RitualSchedule copyWith(
+          {String? scheduleId,
+          String? itemId,
+          String? personId,
+          String? kind,
+          String? label,
+          bool? enabled,
+          int? hour,
+          int? minute,
+          int? weekdayMask,
+          int? createdAt,
+          int? updatedAt,
+          Value<int?> lastTriggeredAt = const Value.absent(),
+          Value<int?> nextTriggerAt = const Value.absent()}) =>
+      RitualSchedule(
+        scheduleId: scheduleId ?? this.scheduleId,
+        itemId: itemId ?? this.itemId,
+        personId: personId ?? this.personId,
+        kind: kind ?? this.kind,
+        label: label ?? this.label,
+        enabled: enabled ?? this.enabled,
+        hour: hour ?? this.hour,
+        minute: minute ?? this.minute,
+        weekdayMask: weekdayMask ?? this.weekdayMask,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        lastTriggeredAt: lastTriggeredAt.present
+            ? lastTriggeredAt.value
+            : this.lastTriggeredAt,
+        nextTriggerAt:
+            nextTriggerAt.present ? nextTriggerAt.value : this.nextTriggerAt,
+      );
+  RitualSchedule copyWithCompanion(RitualSchedulesCompanion data) {
+    return RitualSchedule(
+      scheduleId:
+          data.scheduleId.present ? data.scheduleId.value : this.scheduleId,
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      personId: data.personId.present ? data.personId.value : this.personId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      label: data.label.present ? data.label.value : this.label,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      hour: data.hour.present ? data.hour.value : this.hour,
+      minute: data.minute.present ? data.minute.value : this.minute,
+      weekdayMask:
+          data.weekdayMask.present ? data.weekdayMask.value : this.weekdayMask,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      lastTriggeredAt: data.lastTriggeredAt.present
+          ? data.lastTriggeredAt.value
+          : this.lastTriggeredAt,
+      nextTriggerAt: data.nextTriggerAt.present
+          ? data.nextTriggerAt.value
+          : this.nextTriggerAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RitualSchedule(')
+          ..write('scheduleId: $scheduleId, ')
+          ..write('itemId: $itemId, ')
+          ..write('personId: $personId, ')
+          ..write('kind: $kind, ')
+          ..write('label: $label, ')
+          ..write('enabled: $enabled, ')
+          ..write('hour: $hour, ')
+          ..write('minute: $minute, ')
+          ..write('weekdayMask: $weekdayMask, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('lastTriggeredAt: $lastTriggeredAt, ')
+          ..write('nextTriggerAt: $nextTriggerAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      scheduleId,
+      itemId,
+      personId,
+      kind,
+      label,
+      enabled,
+      hour,
+      minute,
+      weekdayMask,
+      createdAt,
+      updatedAt,
+      lastTriggeredAt,
+      nextTriggerAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RitualSchedule &&
+          other.scheduleId == this.scheduleId &&
+          other.itemId == this.itemId &&
+          other.personId == this.personId &&
+          other.kind == this.kind &&
+          other.label == this.label &&
+          other.enabled == this.enabled &&
+          other.hour == this.hour &&
+          other.minute == this.minute &&
+          other.weekdayMask == this.weekdayMask &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.lastTriggeredAt == this.lastTriggeredAt &&
+          other.nextTriggerAt == this.nextTriggerAt);
+}
+
+class RitualSchedulesCompanion extends UpdateCompanion<RitualSchedule> {
+  final Value<String> scheduleId;
+  final Value<String> itemId;
+  final Value<String> personId;
+  final Value<String> kind;
+  final Value<String> label;
+  final Value<bool> enabled;
+  final Value<int> hour;
+  final Value<int> minute;
+  final Value<int> weekdayMask;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int?> lastTriggeredAt;
+  final Value<int?> nextTriggerAt;
+  final Value<int> rowid;
+  const RitualSchedulesCompanion({
+    this.scheduleId = const Value.absent(),
+    this.itemId = const Value.absent(),
+    this.personId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.label = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.hour = const Value.absent(),
+    this.minute = const Value.absent(),
+    this.weekdayMask = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.lastTriggeredAt = const Value.absent(),
+    this.nextTriggerAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RitualSchedulesCompanion.insert({
+    required String scheduleId,
+    required String itemId,
+    required String personId,
+    this.kind = const Value.absent(),
+    this.label = const Value.absent(),
+    this.enabled = const Value.absent(),
+    required int hour,
+    required int minute,
+    required int weekdayMask,
+    required int createdAt,
+    required int updatedAt,
+    this.lastTriggeredAt = const Value.absent(),
+    this.nextTriggerAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : scheduleId = Value(scheduleId),
+        itemId = Value(itemId),
+        personId = Value(personId),
+        hour = Value(hour),
+        minute = Value(minute),
+        weekdayMask = Value(weekdayMask),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<RitualSchedule> custom({
+    Expression<String>? scheduleId,
+    Expression<String>? itemId,
+    Expression<String>? personId,
+    Expression<String>? kind,
+    Expression<String>? label,
+    Expression<bool>? enabled,
+    Expression<int>? hour,
+    Expression<int>? minute,
+    Expression<int>? weekdayMask,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? lastTriggeredAt,
+    Expression<int>? nextTriggerAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (scheduleId != null) 'schedule_id': scheduleId,
+      if (itemId != null) 'item_id': itemId,
+      if (personId != null) 'person_id': personId,
+      if (kind != null) 'kind': kind,
+      if (label != null) 'label': label,
+      if (enabled != null) 'enabled': enabled,
+      if (hour != null) 'hour': hour,
+      if (minute != null) 'minute': minute,
+      if (weekdayMask != null) 'weekday_mask': weekdayMask,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (lastTriggeredAt != null) 'last_triggered_at': lastTriggeredAt,
+      if (nextTriggerAt != null) 'next_trigger_at': nextTriggerAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RitualSchedulesCompanion copyWith(
+      {Value<String>? scheduleId,
+      Value<String>? itemId,
+      Value<String>? personId,
+      Value<String>? kind,
+      Value<String>? label,
+      Value<bool>? enabled,
+      Value<int>? hour,
+      Value<int>? minute,
+      Value<int>? weekdayMask,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
+      Value<int?>? lastTriggeredAt,
+      Value<int?>? nextTriggerAt,
+      Value<int>? rowid}) {
+    return RitualSchedulesCompanion(
+      scheduleId: scheduleId ?? this.scheduleId,
+      itemId: itemId ?? this.itemId,
+      personId: personId ?? this.personId,
+      kind: kind ?? this.kind,
+      label: label ?? this.label,
+      enabled: enabled ?? this.enabled,
+      hour: hour ?? this.hour,
+      minute: minute ?? this.minute,
+      weekdayMask: weekdayMask ?? this.weekdayMask,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      lastTriggeredAt: lastTriggeredAt ?? this.lastTriggeredAt,
+      nextTriggerAt: nextTriggerAt ?? this.nextTriggerAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (scheduleId.present) {
+      map['schedule_id'] = Variable<String>(scheduleId.value);
+    }
+    if (itemId.present) {
+      map['item_id'] = Variable<String>(itemId.value);
+    }
+    if (personId.present) {
+      map['person_id'] = Variable<String>(personId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    if (hour.present) {
+      map['hour'] = Variable<int>(hour.value);
+    }
+    if (minute.present) {
+      map['minute'] = Variable<int>(minute.value);
+    }
+    if (weekdayMask.present) {
+      map['weekday_mask'] = Variable<int>(weekdayMask.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (lastTriggeredAt.present) {
+      map['last_triggered_at'] = Variable<int>(lastTriggeredAt.value);
+    }
+    if (nextTriggerAt.present) {
+      map['next_trigger_at'] = Variable<int>(nextTriggerAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RitualSchedulesCompanion(')
+          ..write('scheduleId: $scheduleId, ')
+          ..write('itemId: $itemId, ')
+          ..write('personId: $personId, ')
+          ..write('kind: $kind, ')
+          ..write('label: $label, ')
+          ..write('enabled: $enabled, ')
+          ..write('hour: $hour, ')
+          ..write('minute: $minute, ')
+          ..write('weekdayMask: $weekdayMask, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('lastTriggeredAt: $lastTriggeredAt, ')
+          ..write('nextTriggerAt: $nextTriggerAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -2255,6 +2905,8 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $SleevesTable sleeves = $SleevesTable(this);
   late final $RitualItemsTable ritualItems = $RitualItemsTable(this);
   late final $RitualEventsTable ritualEvents = $RitualEventsTable(this);
+  late final $RitualSchedulesTable ritualSchedules =
+      $RitualSchedulesTable(this);
   late final Index idxSleevesPersonSort = Index('idx_sleeves_person_sort',
       'CREATE INDEX idx_sleeves_person_sort ON sleeves (person_id, sort_order)');
   late final Index idxRitualItemsPersonState = Index(
@@ -2275,6 +2927,11 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final Index idxRitualEventsPersonSleeveTime = Index(
       'idx_ritual_events_person_sleeve_time',
       'CREATE INDEX idx_ritual_events_person_sleeve_time ON ritual_events (person_id, sleeve_id, timestamp)');
+  late final Index idxRitualSchedulesPersonEnabledTime = Index(
+      'idx_ritual_schedules_person_enabled_time',
+      'CREATE INDEX idx_ritual_schedules_person_enabled_time ON ritual_schedules (person_id, enabled, hour, minute)');
+  late final Index idxRitualSchedulesItem = Index('idx_ritual_schedules_item',
+      'CREATE INDEX idx_ritual_schedules_item ON ritual_schedules (item_id)');
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2284,13 +2941,16 @@ abstract class _$AppDb extends GeneratedDatabase {
         sleeves,
         ritualItems,
         ritualEvents,
+        ritualSchedules,
         idxSleevesPersonSort,
         idxRitualItemsPersonState,
         idxRitualItemsPersonArchivedAt,
         idxRitualItemsPersonSleeveState,
         idxRitualEventsPersonTime,
         idxRitualEventsItemTime,
-        idxRitualEventsPersonSleeveTime
+        idxRitualEventsPersonSleeveTime,
+        idxRitualSchedulesPersonEnabledTime,
+        idxRitualSchedulesItem
       ];
 }
 
@@ -3325,6 +3985,302 @@ typedef $$RitualEventsTableProcessedTableManager = ProcessedTableManager<
     (RitualEvent, BaseReferences<_$AppDb, $RitualEventsTable, RitualEvent>),
     RitualEvent,
     PrefetchHooks Function()>;
+typedef $$RitualSchedulesTableCreateCompanionBuilder = RitualSchedulesCompanion
+    Function({
+  required String scheduleId,
+  required String itemId,
+  required String personId,
+  Value<String> kind,
+  Value<String> label,
+  Value<bool> enabled,
+  required int hour,
+  required int minute,
+  required int weekdayMask,
+  required int createdAt,
+  required int updatedAt,
+  Value<int?> lastTriggeredAt,
+  Value<int?> nextTriggerAt,
+  Value<int> rowid,
+});
+typedef $$RitualSchedulesTableUpdateCompanionBuilder = RitualSchedulesCompanion
+    Function({
+  Value<String> scheduleId,
+  Value<String> itemId,
+  Value<String> personId,
+  Value<String> kind,
+  Value<String> label,
+  Value<bool> enabled,
+  Value<int> hour,
+  Value<int> minute,
+  Value<int> weekdayMask,
+  Value<int> createdAt,
+  Value<int> updatedAt,
+  Value<int?> lastTriggeredAt,
+  Value<int?> nextTriggerAt,
+  Value<int> rowid,
+});
+
+class $$RitualSchedulesTableFilterComposer
+    extends Composer<_$AppDb, $RitualSchedulesTable> {
+  $$RitualSchedulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get scheduleId => $composableBuilder(
+      column: $table.scheduleId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get itemId => $composableBuilder(
+      column: $table.itemId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get personId => $composableBuilder(
+      column: $table.personId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get kind => $composableBuilder(
+      column: $table.kind, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get label => $composableBuilder(
+      column: $table.label, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+      column: $table.enabled, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get hour => $composableBuilder(
+      column: $table.hour, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get minute => $composableBuilder(
+      column: $table.minute, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get weekdayMask => $composableBuilder(
+      column: $table.weekdayMask, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get lastTriggeredAt => $composableBuilder(
+      column: $table.lastTriggeredAt,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get nextTriggerAt => $composableBuilder(
+      column: $table.nextTriggerAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$RitualSchedulesTableOrderingComposer
+    extends Composer<_$AppDb, $RitualSchedulesTable> {
+  $$RitualSchedulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get scheduleId => $composableBuilder(
+      column: $table.scheduleId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get itemId => $composableBuilder(
+      column: $table.itemId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get personId => $composableBuilder(
+      column: $table.personId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+      column: $table.kind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get label => $composableBuilder(
+      column: $table.label, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+      column: $table.enabled, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get hour => $composableBuilder(
+      column: $table.hour, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get minute => $composableBuilder(
+      column: $table.minute, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get weekdayMask => $composableBuilder(
+      column: $table.weekdayMask, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get lastTriggeredAt => $composableBuilder(
+      column: $table.lastTriggeredAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get nextTriggerAt => $composableBuilder(
+      column: $table.nextTriggerAt,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$RitualSchedulesTableAnnotationComposer
+    extends Composer<_$AppDb, $RitualSchedulesTable> {
+  $$RitualSchedulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get scheduleId => $composableBuilder(
+      column: $table.scheduleId, builder: (column) => column);
+
+  GeneratedColumn<String> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<String> get personId =>
+      $composableBuilder(column: $table.personId, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+
+  GeneratedColumn<int> get hour =>
+      $composableBuilder(column: $table.hour, builder: (column) => column);
+
+  GeneratedColumn<int> get minute =>
+      $composableBuilder(column: $table.minute, builder: (column) => column);
+
+  GeneratedColumn<int> get weekdayMask => $composableBuilder(
+      column: $table.weekdayMask, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get lastTriggeredAt => $composableBuilder(
+      column: $table.lastTriggeredAt, builder: (column) => column);
+
+  GeneratedColumn<int> get nextTriggerAt => $composableBuilder(
+      column: $table.nextTriggerAt, builder: (column) => column);
+}
+
+class $$RitualSchedulesTableTableManager extends RootTableManager<
+    _$AppDb,
+    $RitualSchedulesTable,
+    RitualSchedule,
+    $$RitualSchedulesTableFilterComposer,
+    $$RitualSchedulesTableOrderingComposer,
+    $$RitualSchedulesTableAnnotationComposer,
+    $$RitualSchedulesTableCreateCompanionBuilder,
+    $$RitualSchedulesTableUpdateCompanionBuilder,
+    (
+      RitualSchedule,
+      BaseReferences<_$AppDb, $RitualSchedulesTable, RitualSchedule>
+    ),
+    RitualSchedule,
+    PrefetchHooks Function()> {
+  $$RitualSchedulesTableTableManager(_$AppDb db, $RitualSchedulesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RitualSchedulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RitualSchedulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RitualSchedulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> scheduleId = const Value.absent(),
+            Value<String> itemId = const Value.absent(),
+            Value<String> personId = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<String> label = const Value.absent(),
+            Value<bool> enabled = const Value.absent(),
+            Value<int> hour = const Value.absent(),
+            Value<int> minute = const Value.absent(),
+            Value<int> weekdayMask = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
+            Value<int?> lastTriggeredAt = const Value.absent(),
+            Value<int?> nextTriggerAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RitualSchedulesCompanion(
+            scheduleId: scheduleId,
+            itemId: itemId,
+            personId: personId,
+            kind: kind,
+            label: label,
+            enabled: enabled,
+            hour: hour,
+            minute: minute,
+            weekdayMask: weekdayMask,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            lastTriggeredAt: lastTriggeredAt,
+            nextTriggerAt: nextTriggerAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String scheduleId,
+            required String itemId,
+            required String personId,
+            Value<String> kind = const Value.absent(),
+            Value<String> label = const Value.absent(),
+            Value<bool> enabled = const Value.absent(),
+            required int hour,
+            required int minute,
+            required int weekdayMask,
+            required int createdAt,
+            required int updatedAt,
+            Value<int?> lastTriggeredAt = const Value.absent(),
+            Value<int?> nextTriggerAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RitualSchedulesCompanion.insert(
+            scheduleId: scheduleId,
+            itemId: itemId,
+            personId: personId,
+            kind: kind,
+            label: label,
+            enabled: enabled,
+            hour: hour,
+            minute: minute,
+            weekdayMask: weekdayMask,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            lastTriggeredAt: lastTriggeredAt,
+            nextTriggerAt: nextTriggerAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$RitualSchedulesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDb,
+    $RitualSchedulesTable,
+    RitualSchedule,
+    $$RitualSchedulesTableFilterComposer,
+    $$RitualSchedulesTableOrderingComposer,
+    $$RitualSchedulesTableAnnotationComposer,
+    $$RitualSchedulesTableCreateCompanionBuilder,
+    $$RitualSchedulesTableUpdateCompanionBuilder,
+    (
+      RitualSchedule,
+      BaseReferences<_$AppDb, $RitualSchedulesTable, RitualSchedule>
+    ),
+    RitualSchedule,
+    PrefetchHooks Function()>;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -3337,4 +4293,6 @@ class $AppDbManager {
       $$RitualItemsTableTableManager(_db, _db.ritualItems);
   $$RitualEventsTableTableManager get ritualEvents =>
       $$RitualEventsTableTableManager(_db, _db.ritualEvents);
+  $$RitualSchedulesTableTableManager get ritualSchedules =>
+      $$RitualSchedulesTableTableManager(_db, _db.ritualSchedules);
 }

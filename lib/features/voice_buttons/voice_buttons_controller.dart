@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/constants.dart';
+import '../../data/repositories/alarm_repo.dart';
 import '../../data/repositories/ritual_repo.dart';
 import '../../data/services/integrity_service.dart';
 import '../../infrastructure/audio_service.dart';
@@ -18,12 +19,14 @@ class UiMessage {
 class VoiceButtonsController extends ChangeNotifier {
   VoiceButtonsController({
     required this.repo,
+    required this.alarmRepo,
     required this.audio,
     required this.storage,
     required this.personId,
   });
 
   final RitualRepo repo;
+  final AlarmRepo alarmRepo;
   final AudioService audio;
   final FileStorage storage;
   final String personId;
@@ -108,23 +111,6 @@ class VoiceButtonsController extends ChangeNotifier {
       );
       _emitUi('Sleeve deleted.');
       notifyListeners();
-    } catch (e) {
-      _emitUi(e.toString().replaceFirst('Bad state: ', ''));
-    }
-  }
-
-  Future<void> moveItemToSleeve({
-    required String itemId,
-    required String targetSleeveId,
-  }) async {
-    try {
-      await _stopPlayingIfAny();
-      await repo.moveItemToSleeve(
-        personId: personId,
-        itemId: itemId,
-        targetSleeveId: targetSleeveId,
-      );
-      _emitUi('Item moved to sleeve.');
     } catch (e) {
       _emitUi(e.toString().replaceFirst('Bad state: ', ''));
     }
@@ -295,6 +281,7 @@ class VoiceButtonsController extends ChangeNotifier {
       await storage.deleteIfExists(activePath);
     }
 
+    await alarmRepo.deleteScheduleForItem(itemId);
     await repo.deleteSlot(personId: personId, itemId: itemId);
     _emitUi('Slot deleted permanently.');
   }
@@ -306,12 +293,14 @@ class VoiceButtonsController extends ChangeNotifier {
       await storage.deleteIfExists(archivedPath);
     }
 
+    await alarmRepo.deleteScheduleForItem(itemId);
     await repo.deleteSlot(personId: personId, itemId: itemId);
     _emitUi('Slot deleted permanently.');
   }
 
   Future<void> clearSlotKeepButton(String itemId) async {
     await _stopPlayingIfAny();
+    await alarmRepo.deleteScheduleForItem(itemId);
     await repo.clearToEmpty(personId: personId, itemId: itemId);
     _emitUi('Slot cleared.');
   }
@@ -332,6 +321,35 @@ class VoiceButtonsController extends ChangeNotifier {
       itemId: itemId,
     );
     _emitUi('Broken archived item repaired to empty.');
+  }
+
+  Future<void> saveAlarmSchedule({
+    required String itemId,
+    required String label,
+    required bool enabled,
+    required int hour,
+    required int minute,
+    required int weekdayMask,
+  }) async {
+    try {
+      await alarmRepo.saveScheduleForItem(
+        itemId: itemId,
+        personId: personId,
+        label: label,
+        enabled: enabled,
+        hour: hour,
+        minute: minute,
+        weekdayMask: weekdayMask,
+      );
+      _emitUi('Alarm saved.');
+    } catch (e) {
+      _emitUi(e.toString().replaceFirst('Bad state: ', ''));
+    }
+  }
+
+  Future<void> deleteAlarmSchedule(String itemId) async {
+    await alarmRepo.deleteScheduleForItem(itemId);
+    _emitUi('Alarm removed.');
   }
 
   Future<IntegritySummary> runIntegrityCheck() async {

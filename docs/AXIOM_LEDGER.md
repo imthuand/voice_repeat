@@ -3,7 +3,7 @@
 ## Current Version
 - v1.0 baseline
 - Working branch: v1.1 hardening
-- Current reference commit: aee16ee
+- Current reference commit: e9955c0
 
 ## Core Invariants
 - Never zero empty slots
@@ -21,123 +21,59 @@
 - Active and Archive are view modes within the current sleeve
 - Last used sleeve is restored on startup
 - If the active sleeve is deleted, the app switches to default sleeve
+- One alarm schedule per active button in alarm foundation v1
+- Alarm icon on tile is the direct entry point into scheduling
 
 ## Data Model
 ### schemaVersion
-- Current: 5
+- Current: 6
 
 ### Tables
 - Persons
 - Sleeves
 - RitualItems
 - RitualEvents
+- RitualSchedules
 
-### Persons notable fields
-- personId
-- displayName
-- role
-- language
-- lastActiveSleeveId
-- createdAt
-- updatedAt
-
-### Sleeves notable fields
-- sleeveId
-- personId
-- name
-- sortOrder
-- createdAt
-- updatedAt
-
-### RitualItems notable fields
+### RitualSchedules notable fields
+- scheduleId
 - itemId
 - personId
-- slotIndex
-- sleeveId
+- kind
 - label
-- state
-- activePath
-- archivedPath
-- sizeBytes
-- usageCountTotal
-- lastUsedAt
-- searchText
-- recordedAt
-- archivedAt
-- integrityStatus
-- integrityCheckedAt
+- enabled
+- hour
+- minute
+- weekdayMask
 - createdAt
 - updatedAt
-
-### RitualEvents notable fields
-- eventId
-- itemId
-- personId
-- eventType
-- timestamp
-- metadata
-- sleeveId
-- slotIndex
-- itemState
-- path
-- sizeBytes
-- source
-- enforcementMode
+- lastTriggeredAt
+- nextTriggerAt
 
 ## Public APIs
 ### RitualRepo
-- ensureDefaultPerson()
-- ensureDefaultSleeve()
-- getLastActiveSleeveId()
-- setLastActiveSleeveId()
-- ensureInitialSlots()
-- ensureAtLeastOneEmpty()
-- watchSleeves()
-- createSleeve()
-- renameSleeve()
-- deleteSleeve()
-- moveItemToSleeve()
-- watchActive()
-- watchArchived()
-- rename()
-- setRecorded()
-- markPlayed()
-- setArchived()
-- restore()
-- clearToEmpty()
-- deleteSlot()
-- repairMissingRecordedToEmpty()
-- repairMissingArchivedToEmpty()
-- logEvent()
+- unchanged core item lifecycle and sleeve APIs
+
+### AlarmRepo
+- getScheduleForItem()
+- watchScheduleForItem()
+- saveScheduleForItem()
+- setEnabledForItem()
+- deleteScheduleForItem()
+- describeWeekdayMask()
+- formatTime()
+- describeSchedule()
 
 ### VoiceButtonsController
-- initializeSleeveSelection()
-- setActiveSleeve()
-- createSleeve()
-- renameActiveSleeve()
-- deleteActiveSleeve()
-- moveItemToSleeve()
-- startHold()
-- stopHold()
-- togglePlay()
-- archive()
-- restore()
-- deleteActive()
-- deleteArchived()
-- clearSlotKeepButton()
-- repairRecordedIssueToEmpty()
-- repairArchivedIssueToEmpty()
-- runIntegrityCheck()
-- runIntegrityCheckRepairRecorded()
-- runIntegrityCheckRepairAll()
-
-### IntegrityService
-- checkPerson()
+- existing voice and sleeve methods
+- saveAlarmSchedule()
+- deleteAlarmSchedule()
 
 ## Current Technical Structure
 - UI: voice_buttons_screen.dart
-- Orchestration: voice_buttons_controller.dart
-- Domain and invariants: ritual_repo.dart
+- Voice orchestration: voice_buttons_controller.dart
+- Item domain and invariants: ritual_repo.dart
+- Alarm domain foundation: alarm_repo.dart
 - Persistence: app_db.dart
 - File storage: file_storage.dart
 - Audio boundary: audio_service.dart
@@ -148,83 +84,46 @@
 ### Already implemented
 - recording and playback stable
 - archive, restore, delete flows stable
-- strict slot invariants enforced through repo logic
-- integrity detection and repair flows
-- sleeves v1 domain layer
-- sleeve selector as primary navigation context
-- active and archive filtered by current sleeve
-- last active sleeve persisted and restored
-- fallback to default sleeve after sleeve deletion
-- move between sleeves flow
-- first visual foundation pass
-- design pass 2 for sleeve selector and voice tiles
-- dark popup readability fix and calm pass
-- verify pipeline green at commit aee16ee
+- sleeve system stable
+- integrity flows stable
+- adult playful design refinement
+- action sheets instead of raw tile popup menus
 
 ### This commit purpose
-- replace the remaining system like tile menu feel with rounded bottom action sheets
-- align tile actions with the broader bottom sheet interaction language
-- align sleeve secondary actions with the same action sheet style
-- make the overall UI feel more adult, unified, and premium playful
-- slightly reduce visual intensity in hero and tiles without losing character
-
-## Sleeve Rules
-- Every person has a stable default sleeve
-- New sleeves get one empty slot immediately
-- Default sleeve cannot be deleted
-- A sleeve can only be deleted when all items are empty
-- Active and archived views are always filtered by current sleeve
-- Integrity checks still run across the whole person scope
-- Last used sleeve is restored on app start when it still exists
-- If the active sleeve is deleted, the app switches to default sleeve and persists that change
-- A moved item keeps its content, state, metadata, and integrity status
-- A move to the same sleeve is rejected
-- Source and target sleeves must both preserve the empty slot invariant after move
+- introduce alarm foundation v1
+- add persistent schedule model
+- add direct bell icon entry on active tiles
+- add intuitive alarm editor with time and weekday selection
+- keep future OS scheduling open without overcommitting runtime behavior yet
 
 ## UX Rules
-- Sleeve remains the main context selector
-- Active and Archive are secondary modes, not constant top level tabs
-- Mode switching can be hidden until intentionally revealed
-- The hidden mode switch must remain discoverable through a visible bottom handle
-- Recording, playing, empty, and normal states should be visually distinct
-- Destructive actions must stay clearly marked and confirmed where required
-- Sleeve switching should feel modern and intentional, not like a classic form control
-- Active tiles can be more playful and expressive than archive rows
-- Contextual actions should use rounded action sheets rather than system like square popups where possible
-- Action surfaces should feel like one coherent family
+- Alarm entry should be obvious and one tap away on the tile
+- Alarm editing should feel lightweight and friendly
+- Time selection and day selection should be clear without feeling technical
+- Alarm setup should not require leaving the tile context
+- Save and remove paths should both be obvious
 
-## Design Direction v2.2
-- Dark, calm, playful premium interface
-- Visual sleeve identity through theme color and icon
-- Sleeve selector presented as a hero control, not a basic input
-- Active voice tiles use softer organic shapes and layered bubble language
-- Action surfaces are increasingly unified through rounded bottom sheets
-- Archive remains simpler and more operational
-- Functional clarity remains more important than decoration
-- Reduce raw system UI feeling without overloading the screen
+## Design Direction for Alarms
+- bell icon as first class tile affordance
+- one schedule per item in v1
+- daily, weekdays, weekend, and custom day patterns supported through weekday mask
+- schedule summary shown directly on the tile once configured
 
 ## Known Constraints
-- Sleeve themes are currently derived in UI only
-- Theme selection is not yet user configurable
-- Bubble and playful styling is visual only for now
-- No advanced motion system yet
-- No design token layer yet
-- Active and archive bottom reveal remains intentionally simple in v1
-- Tile actions now use action sheets, while some app level actions still use popup menus
+- This step does not yet perform live OS level scheduling
+- Android exact alarms need special access and are denied by default for many new installs
+- iOS local notification scheduling is possible later, but this step intentionally focuses on data and UX foundation first
+- No background auto playback yet
+- Notification runtime and rescheduling logic will be the next alarm layer
 
 ## Next Planned Work
-### Immediate next layer after this pass
-- review whether tile action sheets feel better than popup menus
-- assess if the sleeve hero should be reduced one more step
-- evaluate whether active tiles now sit in the right balance between fun and premium
-
-### Likely next functional step
-- alarm and scheduling domain foundation
-- no background auto playback yet
-- first define model, storage, and UI setup cleanly
+### Next alarm layer
+- connect saved schedules to local notifications
+- compute and persist nextTriggerAt
+- add boot and permission recovery logic
+- decide exact reminder behavior versus regular local notification behavior
 
 ### Later
-- richer alarm behavior
-- notifications or timed playback decision
-- optional sleeve theme customization
-- richer reconciliation and repair workflows
+- optional multiple alarms per button
+- optional alarm theme variations
+- optional sound preview or linked playback logic
