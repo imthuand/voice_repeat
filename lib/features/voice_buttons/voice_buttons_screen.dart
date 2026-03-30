@@ -109,6 +109,35 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
     return palettes[hash % palettes.length];
   }
 
+  Future<T?> _showScrollableSheet<T>({
+    required Widget child,
+  }) {
+    return showModalBottomSheet<T>(
+      context: context,
+      backgroundColor: const Color(0xFF121418),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.88,
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              18,
+              12,
+              18,
+              22 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _renameDialog(
     BuildContext context,
     String itemId,
@@ -260,91 +289,80 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
       return;
     }
 
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: const Color(0xFF121418),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 42,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(99),
-                ),
+    final selected = await _showScrollableSheet<String>(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 42,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Move to sleeve',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
               ),
-              const SizedBox(height: 16),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Move to sleeve',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              ...candidates.map((sleeve) {
-                final theme = _themeForSleeve(sleeve);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: InkWell(
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...candidates.map((sleeve) {
+            final theme = _themeForSleeve(sleeve);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(22),
+                onTap: () => Navigator.pop(context, sleeve.sleeveId),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        theme.primary.withValues(alpha: 0.20),
+                        theme.accent.withValues(alpha: 0.13),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(22),
-                    onTap: () => Navigator.pop(context, sleeve.sleeveId),
-                    child: Ink(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.primary.withValues(alpha: 0.20),
-                            theme.accent.withValues(alpha: 0.13),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.06),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            _ThemeOrb(theme: theme, size: 42),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                sleeve.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                              color: Colors.white70,
-                            ),
-                          ],
-                        ),
-                      ),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.06),
                     ),
                   ),
-                );
-              }),
-            ],
-          ),
-        ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        _ThemeOrb(theme: theme, size: 42),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            sleeve.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: Colors.white70,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
 
@@ -452,198 +470,180 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
       };
     }
 
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: const Color(0xFF121418),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final label =
-                item.label.isEmpty ? 'Voice ${item.slotIndex + 1}' : item.label;
+    final result = await _showScrollableSheet<String>(
+      child: StatefulBuilder(
+        builder: (context, setModalState) {
+          final label =
+              item.label.isEmpty ? 'Voice ${item.slotIndex + 1}' : item.label;
 
-            Future<void> pickTime() async {
-              final now = TimeOfDay(hour: hour, minute: minute);
-              final picked = await showTimePicker(
-                context: context,
-                initialTime: now,
-                builder: (context, child) {
-                  return Theme(
-                    data: Theme.of(context).copyWith(
-                      colorScheme: const ColorScheme.dark(),
-                    ),
-                    child: child!,
-                  );
-                },
-              );
+          Future<void> pickTime() async {
+            final now = TimeOfDay(hour: hour, minute: minute);
+            final picked = await showTimePicker(
+              context: context,
+              initialTime: now,
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.dark(),
+                  ),
+                  child: child!,
+                );
+              },
+            );
 
-              if (picked == null) return;
+            if (picked == null) return;
 
-              setModalState(() {
-                hour = picked.hour;
-                minute = picked.minute;
-              });
-            }
+            setModalState(() {
+              hour = picked.hour;
+              minute = picked.minute;
+            });
+          }
 
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  18,
-                  12,
-                  18,
-                  22 + MediaQuery.of(context).viewInsets.bottom,
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(99),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.22),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(18),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
+                    child: const Icon(
+                      Icons.alarm_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: const Icon(
-                            Icons.alarm_rounded,
+                        const Text(
+                          'Alarm',
+                          style: TextStyle(
                             color: Colors.white,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Alarm',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 21,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                label,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.70),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                        const SizedBox(height: 4),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.70),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
-                        ),
-                        Switch(
-                          value: enabled,
-                          onChanged: (value) {
-                            setModalState(() => enabled = value);
-                          },
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    _AlarmTimeCard(
-                      timeText: alarmRepo.formatTime(hour, minute),
-                      onTap: pickTime,
-                    ),
-                    const SizedBox(height: 14),
-                    _AlarmPresetRow(
-                      currentMask: AlarmWeekday.maskOf(selectedDays),
-                      onDaily: () {
-                        setModalState(() {
-                          selectedDays = {...AlarmWeekday.ordered};
-                        });
-                      },
-                      onWeekdays: () {
-                        setModalState(() {
-                          selectedDays = {
-                            AlarmWeekday.monday,
-                            AlarmWeekday.tuesday,
-                            AlarmWeekday.wednesday,
-                            AlarmWeekday.thursday,
-                            AlarmWeekday.friday,
-                          };
-                        });
-                      },
-                      onWeekend: () {
-                        setModalState(() {
-                          selectedDays = {
-                            AlarmWeekday.saturday,
-                            AlarmWeekday.sunday,
-                          };
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: AlarmWeekday.ordered.map((day) {
-                        final active = selectedDays.contains(day);
-                        return FilterChip(
-                          selected: active,
-                          onSelected: (value) {
-                            setModalState(() {
-                              if (value) {
-                                selectedDays.add(day);
-                              } else if (selectedDays.length > 1) {
-                                selectedDays.remove(day);
-                              }
-                            });
-                          },
-                          label: Text(
-                            AlarmWeekday.weekdayShortLabels[day] ?? '?',
-                          ),
-                          selectedColor: Colors.white,
-                          backgroundColor: Colors.white.withValues(alpha: 0.06),
-                          labelStyle: TextStyle(
-                            color: active ? Colors.black : Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          checkmarkColor: Colors.black,
-                          side: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.08),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 18),
-                    if (existing != null)
-                      _ActionSheetButton(
-                        icon: Icons.delete_outline,
-                        label: 'Remove alarm',
-                        isDestructive: true,
-                        onTap: () => Navigator.pop(context, 'delete'),
-                      ),
-                    if (existing != null) const SizedBox(height: 10),
-                    _ActionSheetButton(
-                      icon: Icons.save_outlined,
-                      label: 'Save alarm',
-                      onTap: () => Navigator.pop(context, 'save'),
-                    ),
-                  ],
-                ),
+                  ),
+                  Switch(
+                    value: enabled,
+                    onChanged: (value) {
+                      setModalState(() => enabled = value);
+                    },
+                  ),
+                ],
               ),
-            );
-          },
-        );
-      },
+              const SizedBox(height: 18),
+              _AlarmTimeCard(
+                timeText: alarmRepo.formatTime(hour, minute),
+                onTap: pickTime,
+              ),
+              const SizedBox(height: 14),
+              _AlarmPresetRow(
+                currentMask: AlarmWeekday.maskOf(selectedDays),
+                onDaily: () {
+                  setModalState(() {
+                    selectedDays = {...AlarmWeekday.ordered};
+                  });
+                },
+                onWeekdays: () {
+                  setModalState(() {
+                    selectedDays = {
+                      AlarmWeekday.monday,
+                      AlarmWeekday.tuesday,
+                      AlarmWeekday.wednesday,
+                      AlarmWeekday.thursday,
+                      AlarmWeekday.friday,
+                    };
+                  });
+                },
+                onWeekend: () {
+                  setModalState(() {
+                    selectedDays = {
+                      AlarmWeekday.saturday,
+                      AlarmWeekday.sunday,
+                    };
+                  });
+                },
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: AlarmWeekday.ordered.map((day) {
+                  final active = selectedDays.contains(day);
+                  return FilterChip(
+                    selected: active,
+                    onSelected: (value) {
+                      setModalState(() {
+                        if (value) {
+                          selectedDays.add(day);
+                        } else if (selectedDays.length > 1) {
+                          selectedDays.remove(day);
+                        }
+                      });
+                    },
+                    label: Text(
+                      AlarmWeekday.weekdayShortLabels[day] ?? '?',
+                    ),
+                    selectedColor: Colors.white,
+                    backgroundColor: Colors.white.withValues(alpha: 0.06),
+                    labelStyle: TextStyle(
+                      color: active ? Colors.black : Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    checkmarkColor: Colors.black,
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 18),
+              if (existing != null)
+                _ActionSheetButton(
+                  icon: Icons.delete_outline,
+                  label: 'Remove alarm',
+                  isDestructive: true,
+                  onTap: () => Navigator.pop(context, 'delete'),
+                ),
+              if (existing != null) const SizedBox(height: 10),
+              _ActionSheetButton(
+                icon: Icons.save_outlined,
+                label: 'Save alarm',
+                onTap: () => Navigator.pop(context, 'save'),
+              ),
+            ],
+          );
+        },
+      ),
     );
 
     if (result == 'delete') {
@@ -674,75 +674,65 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
   }) async {
     if (!mounted) return;
 
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: const Color(0xFF121418),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 42,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  item.label.isEmpty ? 'Voice actions' : item.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(height: 14),
-              _ActionSheetButton(
-                icon: Icons.alarm_rounded,
-                label: schedule == null ? 'Add alarm' : 'Edit alarm',
-                onTap: () => Navigator.pop(context, 'alarm'),
-              ),
-              const SizedBox(height: 10),
-              _ActionSheetButton(
-                icon: Icons.edit_outlined,
-                label: 'Rename',
-                onTap: () => Navigator.pop(context, 'rename'),
-              ),
-              const SizedBox(height: 10),
-              _ActionSheetButton(
-                icon: Icons.drive_file_move_outline,
-                label: 'Move to sleeve',
-                onTap: () => Navigator.pop(context, 'move'),
-              ),
-              const SizedBox(height: 10),
-              _ActionSheetButton(
-                icon: Icons.archive_outlined,
-                label: 'Archive',
-                enabled: !isEmpty && item.activePath != null,
-                onTap: () => Navigator.pop(context, 'archive'),
-              ),
-              const SizedBox(height: 10),
-              _ActionSheetButton(
-                icon: Icons.delete_outline,
-                label: 'Delete permanently',
-                isDestructive: true,
-                onTap: () => Navigator.pop(context, 'delete'),
-              ),
-            ],
+    final action = await _showScrollableSheet<String>(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 42,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(99),
+            ),
           ),
-        ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              item.label.isEmpty ? 'Voice actions' : item.label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _ActionSheetButton(
+            icon: Icons.alarm_rounded,
+            label: schedule == null ? 'Add alarm' : 'Edit alarm',
+            onTap: () => Navigator.pop(context, 'alarm'),
+          ),
+          const SizedBox(height: 10),
+          _ActionSheetButton(
+            icon: Icons.edit_outlined,
+            label: 'Rename',
+            onTap: () => Navigator.pop(context, 'rename'),
+          ),
+          const SizedBox(height: 10),
+          _ActionSheetButton(
+            icon: Icons.drive_file_move_outline,
+            label: 'Move to sleeve',
+            onTap: () => Navigator.pop(context, 'move'),
+          ),
+          const SizedBox(height: 10),
+          _ActionSheetButton(
+            icon: Icons.archive_outlined,
+            label: 'Archive',
+            enabled: !isEmpty && item.activePath != null,
+            onTap: () => Navigator.pop(context, 'archive'),
+          ),
+          const SizedBox(height: 10),
+          _ActionSheetButton(
+            icon: Icons.delete_outline,
+            label: 'Delete permanently',
+            isDestructive: true,
+            onTap: () => Navigator.pop(context, 'delete'),
+          ),
+        ],
       ),
     );
 
@@ -758,54 +748,44 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
   Future<void> _showSleeveActionSheet(Sleeve sleeve) async {
     if (sleeve.sleeveId == SleeveDefaults.defaultId) return;
 
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: const Color(0xFF121418),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 42,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  sleeve.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              _ActionSheetButton(
-                icon: Icons.edit_outlined,
-                label: 'Rename sleeve',
-                onTap: () => Navigator.pop(context, 'rename'),
-              ),
-              const SizedBox(height: 10),
-              _ActionSheetButton(
-                icon: Icons.delete_outline,
-                label: 'Delete sleeve',
-                isDestructive: true,
-                onTap: () => Navigator.pop(context, 'delete'),
-              ),
-            ],
+    final action = await _showScrollableSheet<String>(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 42,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(99),
+            ),
           ),
-        ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              sleeve.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _ActionSheetButton(
+            icon: Icons.edit_outlined,
+            label: 'Rename sleeve',
+            onTap: () => Navigator.pop(context, 'rename'),
+          ),
+          const SizedBox(height: 10),
+          _ActionSheetButton(
+            icon: Icons.delete_outline,
+            label: 'Delete sleeve',
+            isDestructive: true,
+            onTap: () => Navigator.pop(context, 'delete'),
+          ),
+        ],
       ),
     );
 
@@ -824,176 +804,156 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
   Future<void> _openSleevePicker(List<Sleeve> sleeves) async {
     final activeId = controller.activeSleeveId;
 
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: const Color(0xFF121418),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 42,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(99),
+    await _showScrollableSheet<void>(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 42,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Choose sleeve',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Choose sleeve',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    FilledButton.tonalIcon(
-                      onPressed: () async {
-                        Navigator.pop(sheetContext);
-                        await _createSleeveDialog();
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('New'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: sleeves.map((sleeve) {
-                      final theme = _themeForSleeve(sleeve);
-                      final selected = sleeve.sleeveId == activeId;
-                      final canEdit =
-                          sleeve.sleeveId != SleeveDefaults.defaultId;
+              ),
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _createSleeveDialog();
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('New'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...sleeves.map((sleeve) {
+            final theme = _themeForSleeve(sleeve);
+            final selected = sleeve.sleeveId == activeId;
+            final canEdit = sleeve.sleeveId != SleeveDefaults.defaultId;
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(24),
-                          onTap: () async {
-                            Navigator.pop(sheetContext);
-                            await controller.setActiveSleeve(sleeve.sleeveId);
-                          },
-                          child: Ink(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  theme.primary.withValues(
-                                    alpha: selected ? 0.24 : 0.13,
-                                  ),
-                                  theme.accent.withValues(
-                                    alpha: selected ? 0.16 : 0.08,
-                                  ),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: selected
-                                    ? Colors.white.withValues(alpha: 0.18)
-                                    : Colors.white.withValues(alpha: 0.06),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: theme.accent.withValues(
-                                    alpha: selected ? 0.10 : 0.04,
-                                  ),
-                                  blurRadius: 16,
-                                  spreadRadius: 1,
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await controller.setActiveSleeve(sleeve.sleeveId);
+                },
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        theme.primary.withValues(
+                          alpha: selected ? 0.24 : 0.13,
+                        ),
+                        theme.accent.withValues(
+                          alpha: selected ? 0.16 : 0.08,
+                        ),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: selected
+                          ? Colors.white.withValues(alpha: 0.18)
+                          : Colors.white.withValues(alpha: 0.06),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.accent.withValues(
+                          alpha: selected ? 0.10 : 0.04,
+                        ),
+                        blurRadius: 16,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        _ThemeOrb(theme: theme, size: 46),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                sleeve.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
                                 ),
-                              ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  _ThemeOrb(theme: theme, size: 46),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          sleeve.name,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          sleeve.sleeveId ==
-                                                  SleeveDefaults.defaultId
-                                              ? 'Default sleeve'
-                                              : 'Tap to switch',
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.66,
-                                            ),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                sleeve.sleeveId == SleeveDefaults.defaultId
+                                    ? 'Default sleeve'
+                                    : 'Tap to switch',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(
+                                    alpha: 0.66,
                                   ),
-                                  if (selected)
-                                    const Icon(
-                                      Icons.check_circle_rounded,
-                                      color: Colors.white,
-                                    ),
-                                  if (!selected && canEdit)
-                                    InkWell(
-                                      borderRadius: BorderRadius.circular(16),
-                                      onTap: () async {
-                                        Navigator.pop(sheetContext);
-                                        await _showSleeveActionSheet(sleeve);
-                                      },
-                                      child: Container(
-                                        width: 38,
-                                        height: 38,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.10,
-                                          ),
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                        child: const Icon(
-                                          Icons.more_horiz_rounded,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                ],
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (selected)
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Colors.white,
+                          ),
+                        if (!selected && canEdit)
+                          InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              await _showSleeveActionSheet(sleeve);
+                            },
+                            child: Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(
+                                  alpha: 0.10,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.more_horiz_rounded,
+                                color: Colors.white,
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    }).toList(),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        );
-      },
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -1424,7 +1384,6 @@ class _VoiceButtonsScreenState extends State<VoiceButtonsScreen> {
                       alarmEnabled: schedule?.enabled ?? false,
                       isRecording: controller.recordingItemId == it.itemId,
                       isPlaying: controller.playingItemId == it.itemId,
-                      onIntegrityTap: () {},
                       onAlarmTap: () async {
                         await _showAlarmEditor(
                           item: it,
@@ -1971,7 +1930,6 @@ class _PlayfulVoiceTile extends StatefulWidget {
     required this.scheduleSummary,
     required this.isRecording,
     required this.isPlaying,
-    required this.onIntegrityTap,
     required this.onAlarmTap,
     required this.onOpenActions,
     required this.onHoldStart,
@@ -1987,7 +1945,6 @@ class _PlayfulVoiceTile extends StatefulWidget {
   final String? scheduleSummary;
   final bool isRecording;
   final bool isPlaying;
-  final VoidCallback onIntegrityTap;
   final Future<void> Function() onAlarmTap;
   final Future<void> Function() onOpenActions;
   final Future<void> Function() onHoldStart;
@@ -2004,6 +1961,7 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
   Timer? _timer;
   bool _holdActivated = false;
   bool _pointerDown = false;
+  bool _blockTap = false;
   int _pressToken = 0;
 
   void _reset() {
@@ -2011,6 +1969,11 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
     _timer = null;
     _holdActivated = false;
     _pointerDown = false;
+    _blockTap = false;
+  }
+
+  void _blockParentTap() {
+    _blockTap = true;
   }
 
   @override
@@ -2067,6 +2030,7 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
       onPointerDown: (_) {
         _pointerDown = true;
         _holdActivated = false;
+        _blockTap = false;
         _pressToken++;
         final token = _pressToken;
 
@@ -2074,6 +2038,7 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
         _timer = Timer(holdThreshold, () async {
           if (!_pointerDown) return;
           if (token != _pressToken) return;
+          if (_blockTap) return;
 
           _holdActivated = true;
           HapticFeedback.mediumImpact();
@@ -2089,6 +2054,11 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
         _pointerDown = false;
         _pressToken++;
         _timer?.cancel();
+
+        if (_blockTap) {
+          _reset();
+          return;
+        }
 
         if (_holdActivated) {
           HapticFeedback.selectionClick();
@@ -2183,8 +2153,8 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
                                   : Icons.chat_bubble_rounded,
                         ),
                         const Spacer(),
-                        InkWell(
-                          borderRadius: BorderRadius.circular(16),
+                        _TileIconButton(
+                          onPointerDown: _blockParentTap,
                           onTap: widget.onAlarmTap,
                           child: Container(
                             width: 38,
@@ -2213,8 +2183,8 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        InkWell(
-                          borderRadius: BorderRadius.circular(16),
+                        _TileIconButton(
+                          onPointerDown: _blockParentTap,
                           onTap: widget.onOpenActions,
                           child: Container(
                             width: 38,
@@ -2293,6 +2263,33 @@ class _PlayfulVoiceTileState extends State<_PlayfulVoiceTile> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _TileIconButton extends StatelessWidget {
+  const _TileIconButton({
+    required this.child,
+    required this.onTap,
+    required this.onPointerDown,
+  });
+
+  final Widget child;
+  final Future<void> Function() onTap;
+  final VoidCallback onPointerDown;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => onPointerDown(),
+      behavior: HitTestBehavior.opaque,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () async {
+          await onTap();
+        },
+        child: child,
       ),
     );
   }
